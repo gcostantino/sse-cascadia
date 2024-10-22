@@ -126,3 +126,9 @@ def load_albh_data_cascadia(reference_period, code='ALBH', m_to_mm=1e03, **kwarg
     data, d_std = data * m_to_mm, d_std * m_to_mm
     reference_time_indices = get_reference_period(time_array, reference_period)
     return time_array[reference_time_indices], data[reference_time_indices], d_std[reference_time_indices]
+
+
+def load_cascadia_selected_stations():
+    station_codes = np.loadtxt('INPUT_FILES/stations_cascadia_200.txt', usecols=0, dtype=np.str_).tolist()
+    station_coordinates = np.loadtxt('INPUT_FILES/stations_cascadia_200.txt', usecols=(1, 2))
+    return station_codes, station_coordinates

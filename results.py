@@ -7,19 +7,18 @@ from FUNCTIONS.functions_inv import compute_forward_model_vectorized
 from FUNCTIONS.functions_slab import UTM_GEO
 from config_files.plotting_style import set_matplotlib_style
 from sse_extraction.sse_extraction_from_slip import get_events_from_slip_model, refine_durations
+from utils.geometry_utils import load_cascadia_geometry
+from utils.gnss_utils import load_cascadia_selected_stations
+from utils.slip_model_utils import load_slip_models
 
 set_matplotlib_style()
 
 if __name__ == '__main__':
-    preferred_L = 100  # km
-    preferred_sigma_m = 0.2  # mm
-    preferred_sigma_d = 0.1
-    slip_model = joblib.load(
-        f'../../DATA/sse-cascadia/inversed_ts/dump_50km/slip_inversion_sigma_d_01/inversed_ts_slip5_1000_noise_with_trend_demean_corrlength_{preferred_L}km_sigmam_{preferred_sigma_m}_sigmanoise3D_{preferred_sigma_d}')
-    geometry, recs = joblib.load('../../DATA/sse-cascadia/cascadia_geometry_info/geometry_cascadia')
-    green_td = joblib.load('../../DATA/sse-cascadia/cascadia_geometry_info/green_td_cascadia')
-    station_codes = np.loadtxt('INPUT_FILES/stations_cascadia_200.txt', usecols=0, dtype=np.str_).tolist()
-    station_coordinates = np.loadtxt('INPUT_FILES/stations_cascadia_200.txt', usecols=(1, 2))
+
+    slip_model = load_slip_models()
+    geometry, green_td = load_cascadia_geometry()
+
+    station_codes, station_coordinates = load_cascadia_selected_stations()
 
     with np.load('../../DATA/sse-cascadia/denoised_ts/denoised_ts_slip5_1000_noise_with_trend_demean.npz') as f:
         denoised_ts, time_vec = f['data'], f['time']
@@ -63,7 +62,8 @@ if __name__ == '__main__':
     n_points = 0
     modeled_TS = compute_forward_model_vectorized(slip_model, green_td, n_points, n_time_steps)
 
-    slip_thresholds = [0.07, 0.2, 0.5]
+    # slip_thresholds = [0.07, 0.2, 0.5]
+    slip_thresholds = [0.07, 0.3, 0.5, 0.7]
 
     sse_info_thresh, _ = get_events_from_slip_model(slip_thresholds, slip, signed_slip, area, corrected_time,
                                                     x_centr_lon, y_centr_lat, n_time_steps, shear_modulus=shear_modulus,
