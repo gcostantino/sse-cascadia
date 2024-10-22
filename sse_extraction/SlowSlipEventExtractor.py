@@ -27,6 +27,8 @@ class SlowSlipEventExtractor:
         self.new_duration_dict = new_duration_dict
 
     def get_extracted_events(self):
+        if self.sse_info_thresh is None and self.new_duration_dict is None:
+            self._extract_events()
         return self.sse_info_thresh, self.new_duration_dict
 
     def filter_events(self, criteria):
