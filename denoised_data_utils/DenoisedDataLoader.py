@@ -18,3 +18,13 @@ class DenoisedDataLoader:
         if self.denoised_ts is None and self.time_array is None:
             self._load_denoised_data()
         return self.time_array, self.denoised_ts
+
+    def get_denoised_ts(self):
+        if self.denoised_ts is None:
+            self._load_denoised_data()
+        return self.denoised_ts
+
+    def get_time_array(self):
+        if self.time_array is None:
+            self._load_denoised_data()
+        return self.time_array
