@@ -139,7 +139,7 @@ def refine_durations(slip_thresholds, sse_info_thresh, min_duration=5, mo_rate_p
                         curr_loss = (partial_integral - mo_rate_percentage * tot_moment) ** 2
                         if curr_loss < loss:
                             loss = curr_loss
-                            best_model = [curr_t1, curr_t2]  # check
+                            best_model = [curr_t1, curr_t2]
 
                 t1, t2 = best_model
             new_duration_list.append((t1, t2))
