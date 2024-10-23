@@ -28,19 +28,14 @@ class ModelAnalyzer:
         self.shear_modulus = shear_modulus  # GPa
         self.mo_rates = self.shear_modulus * self.slip_potency_rate
         self.signed_mo_rates = self.shear_modulus * self.signed_slip_potency_rate
-        self.x_centr_lon = None
-        self.y_centr_lat = None
+        x_centr_lon, y_centr_lat = UTM_GEO(self.fault_geometry[:, 9], self.fault_geometry[:, 10])
+        self.x_centr_lon = x_centr_lon
+        self.y_centr_lat = y_centr_lat
 
     def analyze_model(self):
         # Code to analyze the inverted models
         pass
 
-    def get_xy_patch_centroids(self):
-        if self.x_centr_lon is None and self.y_centr_lat is None:
-            x_centr_lon, y_centr_lat = UTM_GEO(self.fault_geometry[:, 9], self.fault_geometry[:, 10])
-            self.x_centr_lon = x_centr_lon
-            self.y_centr_lat = y_centr_lat
-        return self.x_centr_lon, self.y_centr_lat
 
     def save_results(self, filepath):
         # Save analysis results to a file
