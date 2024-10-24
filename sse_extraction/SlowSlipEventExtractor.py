@@ -6,6 +6,7 @@ from slip_modeling.ModelAnalyzer import ModelAnalyzer
 from sse_extraction.sse_extraction_from_slip import get_events_from_slip_model, refine_durations
 from utils.distance_utils import FaultGeometryKDTree
 from utils.ellipse_fitting import fit_ellipse_mo, ConvergenceError, median_xy_mo
+from utils.geo_functions import mo_to_mw
 
 
 class SlowSlipEventExtractor:
@@ -47,6 +48,11 @@ class SlowSlipEventExtractor:
         else:
             mo_rate_list_all_events = mo_rate_list
         return mo_rate_list_all_events
+
+    def get_magnitude_events(self, thresh: float, refined_durations: bool):
+        mo_rates = self.get_moment_rate_events(thresh, refined_durations)
+        mw_events = np.array([mo_to_mw(np.sum(mo_rate)) for mo_rate in mo_rates])
+        return mw_events
 
     def get_event_date_idx(self, thresh: float, refined_durations: bool):
         """Returns the absolute event date indexing, to be used with GNSS time array.
@@ -100,10 +106,12 @@ class SlowSlipEventExtractor:
         # transform the xy points into patch idx
         kd_tree = FaultGeometryKDTree(self.ma.x_centr_lon, self.ma.y_centr_lat)  # this could go in object attributes
         start_points, end_points = np.array(start_points), np.array(end_points)
-        start_points, end_points = start_points[~np.isnan(start_points[:, 0])], end_points[~np.isnan(end_points[:, 0])]
+        # Find the rows that do not contain NaN in both start_points and end_points
+        valid_mask = ~np.isnan(start_points).any(axis=1) & ~np.isnan(end_points).any(axis=1)
+        start_points, end_points = start_points[valid_mask], end_points[valid_mask]
         start_idx = kd_tree.find_closest_indices(*zip(*start_points))
         end_idx = kd_tree.find_closest_indices(*zip(*end_points))
-        return start_idx, end_idx
+        return start_idx, end_idx, valid_mask
 
     def visualize_events(self):
         # Code to visualize slow slip events
