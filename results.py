@@ -2,7 +2,7 @@ import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 
-from FUNCTIONS.functions_figures import spectra_compilation_mo_rate, mo_rate_stack_asymmetry
+from FUNCTIONS.functions_figures import spectra_compilation_mo_rate, mo_rate_stack_asymmetry_patchwise, mo_rate_stack_asymmetry_eventwise
 from FUNCTIONS.functions_inv import compute_forward_model_vectorized
 from FUNCTIONS.functions_slab import UTM_GEO
 from config_files.plotting_style import set_matplotlib_style
@@ -69,12 +69,16 @@ if __name__ == '__main__':
                                                     x_centr_lon, y_centr_lat, n_time_steps, shear_modulus=shear_modulus,
                                                     load=True, spatiotemporal=True, cut_neg_slip=True,
                                                     base_folder='../../DATA/sse-cascadia/sse_info')
-    new_duration_dict = refine_durations(slip_thresholds, sse_info_thresh, mo_rate_percentage=.95)
+    new_duration_dict = refine_durations(slip_thresholds, sse_info_thresh, mo_rate_percentage=.99)
 
     #spectra_compilation_mo_rate(sse_info_thresh, Mo, corrected_time, slip_thresholds, slip, area, shear_modulus, num_freq_bins=40)
 
-    mo_rate_stack_asymmetry(sse_info_thresh, slip_thresholds, n_dur_bins=15, show_fit=False, show_individual_mo=False,
-                            align_start=True, rescale_zero_y=False)
+    '''mo_rate_stack_asymmetry_patchwise(sse_info_thresh, slip_thresholds, n_dur_bins=5, show_fit=False, show_individual_mo=False,
+                            align_start=True, rescale_zero_y=False)'''
+
+    mo_rate_stack_asymmetry_eventwise(sse_info_thresh, slip_thresholds, new_duration_dict, n_dur_bins=5, show_fit=False,
+                                      show_individual_mo=False, align_start=True, rescale_zero_y=False,
+                                      refine_durations=True)
 
 
 
