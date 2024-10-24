@@ -1,8 +1,10 @@
+import matplotlib.pyplot as plt
 import numpy as np
 
 from denoised_data_utils.DenoisedDataHandler import DenoisedDataHandler
 from slip_modeling.ModelAnalyzer import ModelAnalyzer
 from sse_extraction.sse_extraction_from_slip import get_events_from_slip_model, refine_durations
+from utils.ellipse_fitting import fit_ellipse_mo, ConvergenceError, median_xy_mo
 
 
 class SlowSlipEventExtractor:
@@ -49,9 +51,9 @@ class SlowSlipEventExtractor:
         """Returns the absolute event date indexing, to be used with GNSS time array.
         N.W.: here, the end idx is not expressed in slicing notation, to be consistent with the event extraction
         method. When using this in slices, remember to add 1: [start:end + 1]."""
+        date_list_idx_all_events = []
         *_, date_idx_list, _, _ = self.sse_info_thresh[thresh]
         if refined_durations:
-            date_list_idx_all_events = []
             for i, date in enumerate(date_idx_list):
                 idx = self.new_duration_dict[thresh][i]
                 new_start_date = date_idx_list[i][0] + idx[0]
@@ -61,8 +63,43 @@ class SlowSlipEventExtractor:
             date_list_idx_all_events = date_idx_list
         return date_list_idx_all_events
 
-    def get_start_end_patch(self, thresh):
+    def _find_patch_center_mo_distribution(self, mo_rate, mo_thresh: float, max_attempts: int = 10):
+        attempts = 0
+        original_mo_thresh = mo_thresh
+        while attempts < max_attempts:
+            try:
+                partial_mo = np.sum(mo_rate, axis=0)  # partial Mo distribution for the first delta_win days
+                ellipse_params = fit_ellipse_mo(self.ma.x_centr_lon, self.ma.y_centr_lat, partial_mo,
+                                                mo_thresh=mo_thresh)
+                return ellipse_params
+            except ConvergenceError:
+                mo_thresh -= .05
+                attempts += 1
+        # last resort : compute the median position
+        return median_xy_mo(self.ma.x_centr_lon, self.ma.y_centr_lat, np.sum(mo_rate, axis=0), original_mo_thresh)
+
+    def get_start_end_patch(self, thresh: float, delta_win: int = 3, mo_thresh: float = .5, show=False):
+        start_points, end_points = [], []
         self.sse_info_thresh, self.new_duration_dict = self.get_extracted_events_unfiltered()
+        mo_rates = self.get_moment_rate_events(thresh, refined_durations=False)
+        for ev_idx, mo_rate in enumerate(mo_rates):
+
+            print('event ID:', ev_idx, 'LEN', len(mo_rate))
+            start_mo_rate, end_mo_rate = mo_rate[:delta_win], mo_rate[-delta_win:]
+            print(start_mo_rate.shape, end_mo_rate.shape)
+            xc_start, yc_start, *_ = self._find_patch_center_mo_distribution(start_mo_rate, mo_thresh)
+            xc_end, yc_end, *_ = self._find_patch_center_mo_distribution(end_mo_rate, mo_thresh)
+            start_points.append((xc_start, yc_start))
+            end_points.append((xc_end, yc_end))
+            if show:
+                plt.scatter(self.ma.x_centr_lon, self.ma.y_centr_lat, c=start_mo_rate)
+                plt.scatter(xc_start, yc_start, marker='x', c='red')
+                plt.show()
+
+                plt.scatter(self.ma.x_centr_lon, self.ma.y_centr_lat, c=end_mo_rate)
+                plt.scatter(xc_end, yc_end, marker='x', c='red')
+                plt.show()
+        return start_points, end_points
 
     def visualize_events(self):
         # Code to visualize slow slip events
