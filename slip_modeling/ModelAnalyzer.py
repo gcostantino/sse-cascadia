@@ -31,6 +31,8 @@ class ModelAnalyzer:
         x_centr_lon, y_centr_lat = UTM_GEO(self.fault_geometry[:, 9], self.fault_geometry[:, 10])
         self.x_centr_lon = x_centr_lon
         self.y_centr_lat = y_centr_lat
+        self.x_centr_km = self.fault_geometry[:, 9]
+        self.y_centr_km = self.fault_geometry[:, 10]
 
     def analyze_model(self):
         # Code to analyze the inverted models
