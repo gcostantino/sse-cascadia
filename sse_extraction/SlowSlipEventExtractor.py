@@ -4,6 +4,7 @@ import numpy as np
 from denoised_data_utils.DenoisedDataHandler import DenoisedDataHandler
 from slip_modeling.ModelAnalyzer import ModelAnalyzer
 from sse_extraction.sse_extraction_from_slip import get_events_from_slip_model, refine_durations
+from utils.distance_utils import FaultGeometryKDTree
 from utils.ellipse_fitting import fit_ellipse_mo, ConvergenceError, median_xy_mo
 
 
@@ -36,9 +37,9 @@ class SlowSlipEventExtractor:
         return self.sse_info_thresh, self.new_duration_dict
 
     def get_moment_rate_events(self, thresh: float, refined_durations: bool):
+        mo_rate_list_all_events = []
         *_, mo_rate_list, _ = self.sse_info_thresh[thresh]
         if refined_durations:
-            mo_rate_list_all_events = []
             for i, mo_rate in enumerate(mo_rate_list):
                 idx = self.new_duration_dict[thresh][i]
                 new_start, new_end = idx
@@ -83,10 +84,7 @@ class SlowSlipEventExtractor:
         self.sse_info_thresh, self.new_duration_dict = self.get_extracted_events_unfiltered()
         mo_rates = self.get_moment_rate_events(thresh, refined_durations=False)
         for ev_idx, mo_rate in enumerate(mo_rates):
-
-            print('event ID:', ev_idx, 'LEN', len(mo_rate))
             start_mo_rate, end_mo_rate = mo_rate[:delta_win], mo_rate[-delta_win:]
-            print(start_mo_rate.shape, end_mo_rate.shape)
             xc_start, yc_start, *_ = self._find_patch_center_mo_distribution(start_mo_rate, mo_thresh)
             xc_end, yc_end, *_ = self._find_patch_center_mo_distribution(end_mo_rate, mo_thresh)
             start_points.append((xc_start, yc_start))
@@ -99,7 +97,13 @@ class SlowSlipEventExtractor:
                 plt.scatter(self.ma.x_centr_lon, self.ma.y_centr_lat, c=end_mo_rate)
                 plt.scatter(xc_end, yc_end, marker='x', c='red')
                 plt.show()
-        return start_points, end_points
+        # transform the xy points into patch idx
+        kd_tree = FaultGeometryKDTree(self.ma.x_centr_lon, self.ma.y_centr_lat)  # this could go in object attributes
+        start_points, end_points = np.array(start_points), np.array(end_points)
+        start_points, end_points = start_points[~np.isnan(start_points[:, 0])], end_points[~np.isnan(end_points[:, 0])]
+        start_idx = kd_tree.find_closest_indices(*zip(*start_points))
+        end_idx = kd_tree.find_closest_indices(*zip(*end_points))
+        return start_idx, end_idx
 
     def visualize_events(self):
         # Code to visualize slow slip events

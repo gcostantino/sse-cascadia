@@ -25,6 +25,7 @@ def fit_ellipse_mo(x, y, mo_rates, mo_thresh):
 
 
 def median_xy_mo(x, y, mo_rates, mo_thresh):
+    """Warning: can return NaNs."""
     mask_ell = mo_rates > mo_thresh * np.max(mo_rates)
     x_thresh, y_thresh = x[mask_ell], y[mask_ell]
     return np.median(x_thresh), np.median(y_thresh)
