@@ -85,7 +85,7 @@ class SlowSlipEventExtractor:
         # last resort : compute the median position
         return median_xy_mo(self.ma.x_centr_lon, self.ma.y_centr_lat, np.sum(mo_rate, axis=0), original_mo_thresh)
 
-    def get_start_end_patch(self, thresh: float, delta_win: int = 3, mo_thresh: float = .5, show=False):
+    def get_start_end_patch(self, thresh: float, delta_win: int = 5, mo_thresh: float = .5, show=False):
         start_points, end_points = [], []
         self.sse_info_thresh, self.new_duration_dict = self.get_extracted_events_unfiltered()
         mo_rates = self.get_moment_rate_events(thresh, refined_durations=False)
