@@ -33,6 +33,8 @@ class ModelAnalyzer:
         self.y_centr_lat = y_centr_lat
         self.x_centr_km = self.fault_geometry[:, 9]
         self.y_centr_km = self.fault_geometry[:, 10]
+        self.z_centr_km = self.fault_geometry[:, 11]
+        self.patches = np.array([patch_idx for patch_idx in range(self.fault_geometry.shape[0])])
 
     def analyze_model(self):
         # Code to analyze the inverted models

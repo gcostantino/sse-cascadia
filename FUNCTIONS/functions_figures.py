@@ -12,6 +12,7 @@ from scipy.stats import linregress
 from sklearn.cluster import DBSCAN
 
 from FUNCTIONS.functions_slab import UTM_GEO
+from sse_extraction.SlowSlipEventExtractor import SlowSlipEventExtractor
 from utils.colormaps import custom_blues_colormap
 from utils.fourier_transform import custom_fft
 from utils.geo_functions import mo_to_mw
@@ -694,6 +695,282 @@ def mo_rate_stack_asymmetry_eventwise(sse_info_thresh, slip_thresholds, new_dura
         plt.savefig(f'{local_subfolder}/eventwise_fitted_mo_dec_vs_mo{n_bin_str}{thresh_str}.pdf', bbox_inches='tight')
         plt.close(figure)
         # plt.show()
+
+def mo_rate_stack_asymmetry_eventwise_mw_bins(sse_info_thresh, slip_thresholds, new_duration_dict, n_mw_bins=5, show_fit=False,
+                                      show_individual_mo=True, align_start=False, rescale_zero_y=False,
+                                      base_dir='figures', refine_durations=True):
+    local_dir = os.path.join(base_dir, 'asymmetry')
+    os.makedirs(local_dir, exist_ok=True)
+    bins_folder = os.path.join(local_dir, f'{n_mw_bins}_bins_mw')
+    os.makedirs(bins_folder, exist_ok=True)
+
+    for thresh in slip_thresholds:
+        thresh_folder = f'thresh_{thresh}'
+        local_subfolder = os.path.join(bins_folder, thresh_folder)
+        os.makedirs(local_subfolder, exist_ok=True)
+        event_moment_list, event_duration_list, event_area_list, slip_event_list, patch_idx_list, date_list, mo_rate_list, slip_rate_list = \
+            sse_info_thresh[thresh]
+
+        if refine_durations:
+            mo_rate_list_all_events = []
+            for i, mr in enumerate(mo_rate_list):
+                idx = new_duration_dict[thresh][i]
+                #new_start = date_list[i][0] + idx[0]
+                #new_end = date_list[i][0] + idx[1]
+                new_start = idx[0]
+                new_end = idx[1]
+                mo_rate_list_all_events.append(np.sum(mr[new_start:new_end], axis=1))
+        else:
+            mo_rate_list_all_events = [np.sum(mo_rate_list[i], axis=1) for i in range(len(mo_rate_list))]
+
+        mo_all_events = np.array([np.sum(mo_rate) for mo_rate in mo_rate_list_all_events])
+        # remove events that are not valid
+        valid_event_mask = mo_all_events > 0.
+        mo_all_events = mo_all_events[valid_event_mask]
+        mo_rate_list_all_events = [mo_rate_list_all_events[i] for i in range(len(mo_rate_list_all_events)) if valid_event_mask[i]]
+
+        mw_all_events = np.array([mo_to_mw(mo) for mo in mo_all_events])  # can contain -infs
+
+        # create bins with approximately the same number of samples
+        mw_bins = np.percentile(mw_all_events[~np.isinf(mw_all_events)], np.linspace(0, 100, n_mw_bins + 1))
+
+        # mw-related colorbar is computed based on mean Mo per bin
+        mean_mo_per_bin = []
+        for i in range(len(mw_bins) - 1):
+            mw_bin = (mw_bins[i], mw_bins[i + 1])
+            bin_idx = np.where((mw_all_events >= mw_bin[0]) & (mw_all_events < mw_bin[1]))[0]
+            mean_mo_per_bin.append(np.mean([np.sum(mo_rate_list_all_events[j]) for j in bin_idx]))
+            for j in bin_idx:
+                plt.plot(mo_rate_list_all_events[j])
+            plt.show()
+        mean_mw_per_bin = [mo_to_mw(mo) for mo in mean_mo_per_bin]
+
+        figure, axis = plt.subplots(1, 1, figsize=(10, 7), dpi=300, sharex='all', sharey='all')
+        base_cmap = matplotlib.cm.Blues
+        cmap = LinearSegmentedColormap.from_list(
+            'Blues_darker', base_cmap(np.linspace(0.2, 1, 256)))
+        colors = cmap(np.linspace(0, 1, len(mean_mw_per_bin)))
+        norm = Normalize(vmin=np.nanmin(mean_mw_per_bin), vmax=np.nanmax(mean_mw_per_bin))
+        sm = ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+
+        acc_times, dec_times, mo_amplitudes, avg_moments = [], [], [], []
+        for i in range(len(mw_bins) - 1):
+            mw_bin = (mw_bins[i], mw_bins[i + 1])
+            print('bin:', mw_bin)
+            bin_idx = np.where((mw_all_events >= mw_bin[0]) & (mw_all_events < mw_bin[1]))[0]
+            print(len(bin_idx), 'events with Mw in', mw_bin)
+
+            if len(bin_idx) == 0:# or dur_bins[i] < 4.:  # maybe it could be done in a better way...
+                acc_times.append(np.nan)  # add nan to skip a point in the plot (dur_bins is left untouched)
+                dec_times.append(np.nan)
+                mo_amplitudes.append(np.nan)
+                avg_moments.append(np.nan)
+                continue
+
+            max_duration_bin = max([len(mo_rate_list_all_events[j]) for j in bin_idx])
+            max_time_array_in_bin = np.linspace(0, 1, max_duration_bin)  # in [0,1] for correct resampling
+            max_time_array_in_bin_actual = np.linspace(0, max_duration_bin,
+                                                       max_duration_bin)  # to plot the right duration
+            binned_stack, mo_list_stack = [], []
+            for idx in bin_idx:
+                mo_len = len(mo_rate_list_all_events[idx])
+                if mo_len < 2:
+                    continue
+                print(f'try to upsample over {max_duration_bin} days:', len(mo_rate_list_all_events[idx]))
+                f_int = interp1d(np.linspace(0, 1, mo_len), mo_rate_list_all_events[idx], kind='linear')
+                upsampled_mo_rate = f_int(max_time_array_in_bin)
+
+                n_smooth_kernel = 7
+                if max_duration_bin > 10:  # perform smoothing on samples that are long enough
+                    avg_smoothing_kernel = np.ones(n_smooth_kernel) / n_smooth_kernel
+                    upsampled_mo_rate = np.convolve(upsampled_mo_rate, avg_smoothing_kernel, mode='same')
+
+                # amax = np.argmax(upsampled_mo_rate) / max_duration_full
+                time_shift = 0 if align_start else np.argmax(upsampled_mo_rate)
+                #upsampled_mo_rate = upsampled_mo_rate / np.max(upsampled_mo_rate)
+                if show_individual_mo:
+                    plt.plot(max_time_array_in_bin_actual - time_shift, upsampled_mo_rate, alpha=.05,
+                             color=cmap(norm(mw_all_events[idx])))
+                binned_stack.append(upsampled_mo_rate)
+                mo_list_stack.append(np.sum(mo_rate_list_all_events[idx]))
+
+            # binned_stack = np.array(binned_stack)
+            avg_moment_stack = np.mean(mo_list_stack)
+            binned_stack = np.nansum(binned_stack, axis=0) / len(binned_stack)
+            #binned_stack = binned_stack / np.max(binned_stack)
+            '''if rescale_stack_mo:
+                binned_stack = binned_stack * avg_moment_stack'''
+
+            print('mo recomputed', mo_to_mw(np.sum(binned_stack)), mean_mw_per_bin)
+
+            time_shift_stack = 0 if align_start else np.argmax(binned_stack)
+            y_shift_stack = binned_stack[0] if rescale_zero_y else 0
+            print('shift', y_shift_stack)
+            # plt.plot(max_time_array - amax, binned_stack, color=colors[i], lw=2., label='weighted_stack')
+            plt.plot(max_time_array_in_bin_actual - time_shift_stack, binned_stack - y_shift_stack,
+                     color=colors[i], lw=2.)
+            # Fit slip evolution function to stacked Mo rates
+            '''opt_params = fit_slip_evolution(max_time_array_in_bin_actual, binned_stack, var_on_peak=1,
+                                            slip_ev_fcn_signature=triangular_slip_evolution)
+            A_fit, T0_fit, T1_fit, T2_fit = opt_params
+
+            acc_times.append(T1_fit - T0_fit)
+            mo_amplitudes.append(A_fit)
+            avg_moments.append(avg_moment_stack)
+            dec_times.append(T2_fit - T1_fit)
+
+            slip_ev_fit = triangular_slip_evolution(max_time_array_in_bin_actual, *opt_params)
+            if show_fit:
+                plt.plot(max_time_array_in_bin_actual - time_shift_stack, slip_ev_fit - y_shift_stack, '--',
+                         color=colors[i], lw=2.)'''
+            #plt.show()
+        fit_str = '_fit' if show_fit else ''
+        n_bin_str = f'_{n_mw_bins}_mw_bins'
+        thresh_str = f'_thresh_{thresh}'
+
+        cbar = plt.colorbar(sm, ax=axis)
+        cbar.ax.set_ylabel('Moment magnitude (Mw)', rotation=270, labelpad=25)
+
+        plt.ylabel('Moment rate function [$N\cdot m \cdot d^{-1}$]')
+
+        if align_start:
+            plt.xlabel('Duration [days]')
+        else:
+            plt.xlabel('Duration (relative to peak) [days]')
+        plt.savefig(f'{local_subfolder}/eventwise_moment_rate_evolution{fit_str}{n_bin_str}{thresh_str}.pdf',
+                    bbox_inches='tight')
+        plt.close(figure)
+        # plt.show()
+        continue
+        figure, axis = plt.subplots(1, 1, figsize=(8, 6), dpi=300, sharex='all', sharey='all')
+        acc_times, mo_amplitudes, dec_times = np.array(acc_times), np.array(mo_amplitudes), np.array(dec_times)
+        avg_moments = np.array(avg_moments)
+
+        acc_times[acc_times > 100] = np.nan  # remove extreme values
+        acc_times[acc_times < 0] = np.nan  # remove extreme values
+        # plt.plot([0.5 * (dur_bins[i] + dur_bins[i + 1]) for i in range(len(dur_bins) - 1)], acc_times * 100)
+        plt.scatter([0.5 * (dur_bins[i] + dur_bins[i + 1]) for i in range(len(dur_bins) - 1)], acc_times)
+        plt.xlabel('Duration [days]')
+        plt.ylabel('Acceleration time [days]')
+        plt.savefig(f'{local_subfolder}/eventwise_fitted_acc_time_vs_duration{n_bin_str}{thresh_str}.pdf', bbox_inches='tight')
+        plt.close(figure)
+        # plt.show()
+
+        figure, axis = plt.subplots(1, 1, figsize=(8, 6), dpi=300, sharex='all', sharey='all')
+        # plt.plot([0.5 * (dur_bins[i] + dur_bins[i + 1]) for i in range(len(dur_bins) - 1)], acc_times * 100)
+        plt.scatter(avg_moments, acc_times)
+
+        '''def exponential_function(x, a, b, c):
+            return a * np.exp(x * b) + c
+        popt, pcov = curve_fit(exponential_function, avg_moments, acc_times, p0=(1, 1e-16, 1), nan_policy='omit')
+        x_fit = np.linspace(np.nanmin(avg_moments), np.nanmax(avg_moments), 100)
+        plt.plot(x_fit, exponential_function(x_fit, *popt), '--')'''
+
+        plt.xlabel('Total moment [$N\cdot m$]')
+        plt.ylabel('Acceleration time [days]')
+        plt.savefig(f'{local_subfolder}/eventwise_fitted_acc_time_vs_mo{n_bin_str}{thresh_str}.pdf', bbox_inches='tight')
+        plt.close(figure)
+        # plt.show()
+
+        figure, axis = plt.subplots(1, 1, figsize=(8, 6), dpi=300, sharex='all', sharey='all')
+        # plt.plot([0.5 * (dur_bins[i] + dur_bins[i + 1]) for i in range(len(dur_bins) - 1)], acc_times * 100)
+        plt.scatter([0.5 * (dur_bins[i] + dur_bins[i + 1]) for i in range(len(dur_bins) - 1)], mo_amplitudes / acc_times)
+        plt.xlabel('Duration [days]')
+        plt.ylabel('Moment acceleration [$N\cdot m \cdot d^{-2}$]')
+        plt.savefig(f'{local_subfolder}/eventwise_fitted_mo_acc_vs_duration{n_bin_str}{thresh_str}.pdf', bbox_inches='tight')
+        plt.close(figure)
+        # plt.show()
+
+        figure, axis = plt.subplots(1, 1, figsize=(8, 6), dpi=300, sharex='all', sharey='all')
+        # plt.plot([0.5 * (dur_bins[i] + dur_bins[i + 1]) for i in range(len(dur_bins) - 1)], acc_times * 100)
+        plt.scatter(avg_moments, mo_amplitudes / acc_times)
+        plt.xlabel('Total moment [$N\cdot m$]')
+        plt.ylabel('Moment acceleration [$N\cdot m \cdot d^{-2}$]')
+        plt.savefig(f'{local_subfolder}/eventwise_fitted_mo_acc_vs_mo{n_bin_str}{thresh_str}.pdf', bbox_inches='tight')
+        plt.close(figure)
+        # plt.show()
+
+        # deceleration
+        figure, axis = plt.subplots(1, 1, figsize=(8, 6), dpi=300, sharex='all', sharey='all')
+        # plt.plot([0.5 * (dur_bins[i] + dur_bins[i + 1]) for i in range(len(dur_bins) - 1)], acc_times * 100)
+        plt.scatter([0.5 * (dur_bins[i] + dur_bins[i + 1]) for i in range(len(dur_bins) - 1)], dec_times)
+        plt.xlabel('Duration [days]')
+        plt.ylabel('Deceleration time [days]')
+        plt.savefig(f'{local_subfolder}/eventwise_fitted_dec_time_vs_duration{n_bin_str}{thresh_str}.pdf', bbox_inches='tight')
+        plt.close(figure)
+        # plt.show()
+
+        figure, axis = plt.subplots(1, 1, figsize=(8, 6), dpi=300, sharex='all', sharey='all')
+        # plt.plot([0.5 * (dur_bins[i] + dur_bins[i + 1]) for i in range(len(dur_bins) - 1)], acc_times * 100)
+        plt.scatter(avg_moments, dec_times)
+        plt.xlabel('Total moment [$N\cdot m$]')
+        plt.ylabel('Deceleration time [days]')
+        plt.savefig(f'{local_subfolder}/eventwise_fitted_dec_time_vs_mo{n_bin_str}{thresh_str}.pdf', bbox_inches='tight')
+        plt.close(figure)
+        # plt.show()
+
+        figure, axis = plt.subplots(1, 1, figsize=(8, 6), dpi=300, sharex='all', sharey='all')
+        # plt.plot([0.5 * (dur_bins[i] + dur_bins[i + 1]) for i in range(len(dur_bins) - 1)], acc_times * 100)
+        plt.scatter(avg_moments, (acc_times) / (acc_times + dec_times))
+        plt.xlabel('Total moment [$N\cdot m$]')
+        plt.ylabel('Normalized acceleration time [%]')
+        plt.ylim([0, 1])
+        plt.savefig(f'{local_subfolder}/eventwise_fitted_accnorm_time_vs_mo{n_bin_str}{thresh_str}.pdf', bbox_inches='tight')
+        plt.close(figure)
+
+        figure, axis = plt.subplots(1, 1, figsize=(8, 6), dpi=300, sharex='all', sharey='all')
+        # plt.plot([0.5 * (dur_bins[i] + dur_bins[i + 1]) for i in range(len(dur_bins) - 1)], acc_times * 100)
+        plt.scatter([0.5 * (dur_bins[i] + dur_bins[i + 1]) for i in range(len(dur_bins) - 1)], - mo_amplitudes / dec_times)
+        plt.xlabel('Duration [days]')
+        plt.ylabel('Moment deceleration [$N\cdot m \cdot d^{-2}$]')
+        plt.savefig(f'{local_subfolder}/eventwise_fitted_mo_dec_vs_duration{n_bin_str}{thresh_str}.pdf', bbox_inches='tight')
+        plt.close(figure)
+        # plt.show()
+
+        figure, axis = plt.subplots(1, 1, figsize=(8, 6), dpi=300, sharex='all', sharey='all')
+        # plt.plot([0.5 * (dur_bins[i] + dur_bins[i + 1]) for i in range(len(dur_bins) - 1)], acc_times * 100)
+        plt.scatter(avg_moments, - mo_amplitudes / dec_times)
+        plt.xlabel('Total moment [$N\cdot m$]')
+        plt.ylabel('Moment deceleration [$N\cdot m \cdot d^{-2}$]')
+        plt.savefig(f'{local_subfolder}/eventwise_fitted_mo_dec_vs_mo{n_bin_str}{thresh_str}.pdf', bbox_inches='tight')
+        plt.close(figure)
+        # plt.show()
+
+
+def nucleation_arrest_point_vs_mw():
+    se = SlowSlipEventExtractor()
+    sse_info_thresh, new_duration_dict = se.get_extracted_events_unfiltered()
+    nucleation_idx, arrest_idx, valid_mask = se.get_start_end_patch(0.07, delta_win=5)
+    nuc_x, nuc_y = se.ma.x_centr_km[nucleation_idx], se.ma.y_centr_km[nucleation_idx]
+    arr_x, arr_y = se.ma.x_centr_km[arrest_idx], se.ma.y_centr_km[arrest_idx]
+
+    mw = se.get_magnitude_events(0.07, True)[valid_mask]
+    mo_rates = se.get_moment_rate_events(0.07, True)
+
+    d = np.sqrt((nuc_x - arr_x) ** 2 + (nuc_y - arr_y) ** 2)
+
+    plt.scatter(mw, d)
+    plt.ylabel('Distance from nucleation to arrest point [km]')
+    plt.xlabel('Event M$_w$')
+    plt.show()
+
+    '''
+    valid_mo_rates = [mo_rates[i] for i in range(len(mo_rates)) if valid_mask[i]]
+
+    for i, mo_rate in enumerate(valid_mo_rates):
+        if valid_mask[i]:
+            for t in range(len(mo_rate)):
+                sorted_indices = np.argsort(mo_rate[t])
+                plt.scatter(t * np.ones(len(mo_rate[t])), se.ma.y_centr_lat[[sorted_indices]], c=mo_rate[t][[sorted_indices]])
+            cbar = plt.colorbar()
+            plt.scatter([0.], se.ma.y_centr_lat[nucleation_idx[i]], marker='x', s=50, color='red')
+            plt.scatter([t], se.ma.y_centr_lat[arrest_idx[i]], marker='x', s=50, color='red')
+            cbar.set_label('Moment Rate [N.m/day]')
+            plt.ylabel('Latitude')
+            plt.xlabel('Time [days]')
+            plt.show()
+    '''
 
 
 def overview_latitude_time_plot(time, data, tremors, station_coordinates, latsort, offset=20, window_length=60,
