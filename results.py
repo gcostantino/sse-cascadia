@@ -2,7 +2,8 @@ import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 
-from FUNCTIONS.functions_figures import spectra_compilation_mo_rate, mo_rate_stack_asymmetry_patchwise, mo_rate_stack_asymmetry_eventwise
+from FUNCTIONS.functions_figures import spectra_compilation_mo_rate, mo_rate_stack_asymmetry_patchwise, \
+    mo_rate_stack_asymmetry_eventwise, mo_rate_stack_asymmetry_eventwise_mw_bins, nucleation_arrest_point_vs_mw
 from FUNCTIONS.functions_inv import compute_forward_model_vectorized
 from FUNCTIONS.functions_slab import UTM_GEO
 from config_files.plotting_style import set_matplotlib_style
@@ -76,11 +77,15 @@ if __name__ == '__main__':
     '''mo_rate_stack_asymmetry_patchwise(sse_info_thresh, slip_thresholds, n_dur_bins=5, show_fit=False, show_individual_mo=False,
                             align_start=True, rescale_zero_y=False)'''
 
-    mo_rate_stack_asymmetry_eventwise(sse_info_thresh, slip_thresholds, new_duration_dict, n_dur_bins=5, show_fit=False,
+    '''mo_rate_stack_asymmetry_eventwise(sse_info_thresh, slip_thresholds, new_duration_dict, n_dur_bins=5, show_fit=False,
                                       show_individual_mo=False, align_start=True, rescale_zero_y=False,
-                                      refine_durations=True)
+                                      refine_durations=True)'''
 
+    '''mo_rate_stack_asymmetry_eventwise_mw_bins(sse_info_thresh, slip_thresholds, new_duration_dict, n_mw_bins=5, show_fit=False,
+                                      show_individual_mo=False, align_start=True, rescale_zero_y=False,
+                                      refine_durations=True)'''
 
+    nucleation_arrest_point_vs_mw()  # to be refactored with new oop formulation
 
 
 
