@@ -15,7 +15,8 @@ from FUNCTIONS.functions_slab import UTM_GEO
 from sse_extraction.SlowSlipEventExtractor import SlowSlipEventExtractor
 from utils.colormaps import custom_blues_colormap
 from utils.fourier_transform import custom_fft
-from utils.geo_functions import mo_to_mw
+from utils.geo_functions import mo_to_mw, logmo_to_mw, mw_to_logmo, mw_to_mo
+from utils.math_utils import straight_line
 from utils.slab_plot_functions import init_basemap_cascadia, isodepth_label_fmt
 from utils.slab_utils import read_depth_from_slab2
 from utils.slip_evolution_functions import fit_slip_evolution, triangular_slip_evolution

@@ -37,6 +37,9 @@ class SlowSlipEventExtractor:
             self._extract_events_unfiltered()
         return self.sse_info_thresh, self.new_duration_dict
 
+    def load_extracted_events_unfiltered(self):
+        self._extract_events_unfiltered()
+
     def get_moment_rate_events(self, thresh: float, refined_durations: bool):
         mo_rate_list_all_events = []
         *_, mo_rate_list, _ = self.sse_info_thresh[thresh]
@@ -62,6 +65,11 @@ class SlowSlipEventExtractor:
             tot_mo_patch_mask = np.where(tot_mo > 0)[0]
             patch_list_events.append(self.ma.patches[tot_mo_patch_mask])
         return patch_list_events
+
+    def get_area_events(self, thresh: float, refined_durations: bool):
+        event_patches = self.get_event_patches(thresh, refined_durations)
+        event_areas = [sum(self.ma.area[patch_idx] for patch_idx in patches) for patches in event_patches]
+        return event_areas
 
     def get_event_date_idx(self, thresh: float, refined_durations: bool):
         """Returns the absolute event date indexing, to be used with GNSS time array.

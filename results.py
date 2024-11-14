@@ -6,7 +6,9 @@ from FUNCTIONS.functions_figures import spectra_compilation_mo_rate, mo_rate_sta
     mo_rate_stack_asymmetry_eventwise, mo_rate_stack_asymmetry_eventwise_mw_bins, nucleation_arrest_point_vs_mw
 from FUNCTIONS.functions_inv import compute_forward_model_vectorized
 from FUNCTIONS.functions_slab import UTM_GEO
+from FUNCTIONS.scaling_laws_figure import scaling_laws
 from config_files.plotting_style import set_matplotlib_style
+from sse_extraction.SlowSlipEventExtractor import SlowSlipEventExtractor
 from sse_extraction.sse_extraction_from_slip import get_events_from_slip_model, refine_durations
 from utils.geometry_utils import load_cascadia_geometry
 from utils.gnss_utils import load_cascadia_selected_stations
@@ -84,6 +86,15 @@ if __name__ == '__main__':
     '''mo_rate_stack_asymmetry_eventwise_mw_bins(sse_info_thresh, slip_thresholds, new_duration_dict, n_mw_bins=5, show_fit=False,
                                       show_individual_mo=False, align_start=True, rescale_zero_y=False,
                                       refine_durations=True)'''
+
+    #### refactor also before, but suppose code starts here
+    refine_durations = True
+    se = SlowSlipEventExtractor()
+    se.load_extracted_events_unfiltered()
+    time_array = se.ddh.corrected_time
+
+    scaling_laws(se, refine_durations)
+    exit(0)
 
     nucleation_arrest_point_vs_mw()  # to be refactored with new oop formulation
 

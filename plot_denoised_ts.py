@@ -33,5 +33,5 @@ if __name__ == '__main__':
     overview_latitude_time_plot(time_vec, denoised_ts, tremors, station_coordinates, latsort, offset=20,
                                 window_length=60,
                                 static=False, downsample_tremors=True, draw_tremors=True, tremor_alpha=1.,
-                                data_pcolormesh=False, zoom=False, show=False, dpi=300, trenchwards_only=True,
-                                save_as='pdf', raster_scatter=True)
+                                data_pcolormesh=False, zoom=False, show=True, dpi=150, trenchwards_only=True,
+                                save_as='pdf', raster_scatter=False)
