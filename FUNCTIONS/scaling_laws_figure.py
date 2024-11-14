@@ -1,7 +1,11 @@
+import matplotlib
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
+from matplotlib.font_manager import FontProperties
 
+from FUNCTIONS.functions_figures import _annotate_line
+from config_files.plotting_style import set_matplotlib_style
 from sse_extraction.SlowSlipEventExtractor import SlowSlipEventExtractor
 from utils.geo_functions import logmo_to_mw, mw_to_logmo, mw_to_mo, mo_to_mw
 from utils.math_utils import straight_line
@@ -12,7 +16,7 @@ def _mo_duration_scaling(axis: Axes, se: SlowSlipEventExtractor, refine_duration
 
     mo_dummy_array = np.array([10, 25])
 
-    # inset Axes....
+    # inset Axes
     x1, x2, y1, y2 = 14.5, 20, 4.8, 7  # subregion of the original plot
     inset_width = 0.57
     ax_inset = axis.inset_axes([0.4, 0.04, inset_width, inset_width], xlim=(x1, x2), ylim=(y1, y2), xticklabels=[],
@@ -36,7 +40,8 @@ def _mo_duration_scaling(axis: Axes, se: SlowSlipEventExtractor, refine_duration
         event_moment_list = event_moment_list[valid_mo_idx]
         event_duration_list = event_duration_list[valid_mo_idx]
         for axx in (axis, ax_inset):
-            axx.scatter(np.log10(event_moment_list), np.log10(event_duration_list * 86400), edgecolors='k',
+            axx.scatter(np.log10(event_moment_list), np.log10(event_duration_list * 86400),
+                        edgecolors=matplotlib.colors.colorConverter.to_rgba('black', alpha=.5),
                         label=f'thresh: {slip_thresh} mm/day')
 
     day_to_seconds = 86400.
@@ -81,7 +86,8 @@ def _gutenberg_richter(axis: Axes, se: SlowSlipEventExtractor, refine_durations:
         time_span_years = time_array[-1] - time_array[0]
         num_events = np.array(num_events) / time_span_years  # obtain the yearly rate
 
-        axis.scatter(mw_bins, num_events, edgecolors='k', label=f'thresh: {slip_thresh} mm/day')
+        axis.scatter(mw_bins, num_events, edgecolors=matplotlib.colors.colorConverter.to_rgba('black', alpha=.5),
+                     label=f'thresh: {slip_thresh} mm/day')
         mw_bin_list.append(mw_bins)
         num_event_list.append(num_events)
 
@@ -98,37 +104,82 @@ def _mo_area_scaling(axis: Axes, se: SlowSlipEventExtractor, refine_durations: b
     C_tilde = 1 / (C * np.sqrt(aspect_ratio))  # all shape factors
     size_factor = 1e6  # conversion from km^2 to mm^2
     mwax = axis.secondary_xaxis('top', functions=(logmo_to_mw, mw_to_logmo))
-    mo_dummy_array = np.array([14, 22])
+    mo_dummy_array = np.array([14, 21])
 
-    min_sd, max_sd = 1., 10.  # 0.01, 0.1  # MPa
-    min_sd_intercept = -2 / 3 * np.log10(min_sd * 1e6) - 2 / 3 * np.log10(C_tilde)
-    max_sd_intercept = -2 / 3 * np.log10(max_sd * 1e6) - 2 / 3 * np.log10(C_tilde)
+    '''# inset Axes
+    x1, x2, y1, y2 = 14.5, 20, 2.5, 5.6  # subregion of the original plot
+    inset_width = 0.57
+    ax_inset = axis.inset_axes([0.4, 0.04, inset_width, inset_width], xlim=(x1, x2), ylim=(y1, y2), xticklabels=[],
+                               yticklabels=[])
+    secax_inset = ax_inset.secondary_xaxis('top', functions=(logmo_to_mw, mw_to_logmo))
+    secax_inset.set_xticklabels([])'''
+
+    min_sd_eq, max_sd_eq = 1., 10.  # 0.01, 0.1  # MPa
+    min_sd_gao, max_sd_gao = 0.01, 0.1  # MPa
+    min_sd_intercept_eq = -2 / 3 * np.log10(min_sd_eq * 1e6) - 2 / 3 * np.log10(C_tilde)
+    max_sd_intercept_eq = -2 / 3 * np.log10(max_sd_eq * 1e6) - 2 / 3 * np.log10(C_tilde)
+    min_sd_intercept_gao = -2 / 3 * np.log10(min_sd_gao * 1e6) - 2 / 3 * np.log10(C_tilde)
+    max_sd_intercept_gao = -2 / 3 * np.log10(max_sd_gao * 1e6) - 2 / 3 * np.log10(C_tilde)
     axis.fill_between(mo_dummy_array,
-                      straight_line(mo_dummy_array, 2 / 3, min_sd_intercept) - np.log10(size_factor),
-                      straight_line(mo_dummy_array, 2 / 3, max_sd_intercept) - np.log10(size_factor), color='C2',
+                      straight_line(mo_dummy_array, 2 / 3, min_sd_intercept_eq) - np.log10(size_factor),
+                      straight_line(mo_dummy_array, 2 / 3, max_sd_intercept_eq) - np.log10(size_factor), color='C3',
+                      alpha=0.5)
+    axis.fill_between(mo_dummy_array,
+                      straight_line(mo_dummy_array, 2 / 3, min_sd_intercept_gao) - np.log10(size_factor),
+                      straight_line(mo_dummy_array, 2 / 3, max_sd_intercept_gao) - np.log10(size_factor), color='C0',
                       alpha=0.5)
 
     for slip_thresh in se.slip_thresholds:
-        se.get_area_events(slip_thresh, refine_durations)
-        exit(0)
-        event_moment_list, event_duration_list, event_area_list, slip_event_list, patch_idx_list, date_list, mo_rate_list, slip_rate_list = \
-            sse_info_thresh[slip_thresh]
-        event_moment_list, event_duration_list = np.array(event_moment_list), np.array(event_duration_list)
-        event_area_list = np.array(event_area_list)
+        event_moment_list = np.array([mw_to_mo(mw) for mw in se.get_magnitude_events(slip_thresh, refine_durations)])
+        event_areas = se.get_area_events(slip_thresh, refine_durations)
 
         valid_mo_idx = np.where(event_moment_list > 0.)[0]
         event_moment_list = event_moment_list[valid_mo_idx]
-        event_area_list = event_area_list[valid_mo_idx]
+        event_areas = event_areas[valid_mo_idx]
+        #for axx in (axis, ax_inset):
+        axis.scatter(np.log10(event_moment_list), np.log10(event_areas),
+                         edgecolors=matplotlib.colors.colorConverter.to_rgba('black', alpha=.5),
+                         label=f'thresh: {slip_thresh} mm')
 
-        axis.scatter(np.log10(event_moment_list), np.log10(event_area_list), edgecolors='k', color=colors[i],
-                     label=f'thresh: {slip_thresh} mm')
+    x_label_position = 14.5
+    _annotate_line(axis, x_label_position, 2 / 3, min_sd_intercept_eq - np.log10(size_factor),
+                   f'${int(min_sd_eq)} MPa$', color='k', y_label_shift=.2, positive_y_shift=True, x_axis_log=False,
+                   y_axis_log=False, x_label_shift=0, positive_x_shift=False, screen_space=False, forced_angle=2 / 3)
+    _annotate_line(axis, x_label_position, 2 / 3, max_sd_intercept_eq - np.log10(size_factor),
+                   f'${int(max_sd_eq)} MPa$', color='k', y_label_shift=.2, positive_y_shift=True, x_axis_log=False,
+                   y_axis_log=False, x_label_shift=0, positive_x_shift=False, screen_space=False, forced_angle=2 / 3)
+    # draw some iso-stress-drop lines
+    sd_values_isolines = np.array(
+        [1, 10, 100]) * 1e3  # 1 KPa -> (cf. Michel et al., 2019), 10 KPa, 100 KPa -> (cf. Gao et al., 2012)
+    for sd_value in sd_values_isolines:
+        sd_intercept = -2 / 3 * np.log10(sd_value) - 2 / 3 * np.log10(C_tilde)
+        #for axx in (axis, ax_inset):
+        axis.plot(mo_dummy_array, straight_line(mo_dummy_array, 2 / 3, sd_intercept - np.log10(size_factor)),
+                      linestyle='--', color='k', alpha=.5, zorder=-1)
+        _annotate_line(axis, x_label_position, 2 / 3, sd_intercept - np.log10(size_factor),
+                       f'${int(sd_value * 1e-3)} KPa$', color='k', y_label_shift=.2, positive_y_shift=True,
+                       x_axis_log=False, y_axis_log=False, x_label_shift=0, positive_x_shift=False, screen_space=False,
+                       forced_angle=2 / 3)
+
+    #axis.indicate_inset_zoom(ax_inset, edgecolor="black")
+    axis.set_xlabel('log$_{10}$($M_0$)')
+    axis.set_ylabel('log$_{10}$(area [km$^2$])')
+    mwax.set_xlabel('$M_w$')
+    plt.legend()
+    plt.margins(x=0)
+    plt.margins(y=0)
 
 
 def scaling_laws(se: SlowSlipEventExtractor, refine_durations: bool, dpi: int = 100):
-    fig, axes = plt.subplots(1, 3, figsize=(8, 7), dpi=dpi)
+    #fig, axes = plt.subplots(1, 3, figsize=(21, 6), dpi=dpi)
+    fig, axes = plt.subplots(1, 3, figsize=(21, 6), dpi=dpi)  # 7:2 ratio
 
     _mo_duration_scaling(axes[0], se, refine_durations)
     _gutenberg_richter(axes[1], se, refine_durations)
     _mo_area_scaling(axes[2], se, refine_durations)
 
-    plt.show()
+    '''for ax, label in zip(axes, ['A', 'B', 'C']):
+        ax.text(-0.1, 1.15, label, transform=ax.transAxes,
+                fontsize=20, fontweight=1000, va='top', ha='right')'''
+    plt.tight_layout()
+    plt.savefig('figures/scaling_laws.pdf', bbox_inches='tight')

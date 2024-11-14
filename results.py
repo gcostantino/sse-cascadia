@@ -93,7 +93,7 @@ if __name__ == '__main__':
     se.load_extracted_events_unfiltered()
     time_array = se.ddh.corrected_time
 
-    scaling_laws(se, refine_durations)
+    scaling_laws(se, refine_durations, dpi=300)
     exit(0)
 
     nucleation_arrest_point_vs_mw()  # to be refactored with new oop formulation

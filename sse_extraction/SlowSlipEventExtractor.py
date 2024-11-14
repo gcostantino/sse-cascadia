@@ -69,6 +69,7 @@ class SlowSlipEventExtractor:
     def get_area_events(self, thresh: float, refined_durations: bool):
         event_patches = self.get_event_patches(thresh, refined_durations)
         event_areas = [sum(self.ma.area[patch_idx] for patch_idx in patches) for patches in event_patches]
+        event_areas = np.array(event_areas) * 1e-6  # convert to km^2
         return event_areas
 
     def get_event_date_idx(self, thresh: float, refined_durations: bool):
