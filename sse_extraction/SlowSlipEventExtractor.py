@@ -28,7 +28,7 @@ class SlowSlipEventExtractor:
                                                         load=load, spatiotemporal=spatiotemporal,
                                                         cut_neg_slip=cut_neg_slip,
                                                         base_folder=self.base_sse_info_folder)
-        new_duration_dict = refine_durations(self.slip_thresholds, sse_info_thresh, mo_rate_percentage=.95)
+        new_duration_dict = refine_durations(self.slip_thresholds, sse_info_thresh, mo_rate_percentage=.99)
         self.sse_info_thresh = sse_info_thresh
         self.new_duration_dict = new_duration_dict
 
@@ -51,6 +51,18 @@ class SlowSlipEventExtractor:
         else:
             mo_rate_list_all_events = mo_rate_list
         return mo_rate_list_all_events
+
+    def get_slip_rate_patches_events(self, thresh: float, refined_durations: bool):
+        slip_rate_list_all_events = []
+        *_, slip_rate_list = self.sse_info_thresh[thresh]
+        if refined_durations:
+            for i, slip_rate in enumerate(slip_rate_list):
+                idx = self.new_duration_dict[thresh][i]
+                new_start, new_end = idx
+                slip_rate_list_all_events.append(slip_rate[new_start:new_end])
+        else:
+            slip_rate_list_all_events = slip_rate_list
+        return slip_rate_list_all_events
 
     def get_magnitude_events(self, thresh: float, refined_durations: bool):
         mo_rates = self.get_moment_rate_events(thresh, refined_durations)

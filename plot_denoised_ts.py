@@ -20,6 +20,13 @@ if __name__ == '__main__':
 
     with np.load('../../DATA/sse-cascadia/denoised_ts/denoised_ts_slip5_1000_noise_with_trend_demean.npz') as f:
         denoised_ts, time_vec = f['data'], f['time']
+    import matplotlib.pyplot as plt
+
+    print(station_codes[0])
+    print('tot EW displacement', np.sum(denoised_ts[:,0,0]), '-->', np.sum(denoised_ts[:,0,0]) / len(time_vec) * 365, 'mm/yr')
+
+    '''plt.plot(denoised_ts[:,0,0])
+    plt.show()'''
 
     window_length = 60
     offset = 20
@@ -33,5 +40,5 @@ if __name__ == '__main__':
     overview_latitude_time_plot(time_vec, denoised_ts, tremors, station_coordinates, latsort, offset=20,
                                 window_length=60,
                                 static=False, downsample_tremors=True, draw_tremors=True, tremor_alpha=1.,
-                                data_pcolormesh=False, zoom=False, show=True, dpi=150, trenchwards_only=True,
-                                save_as='pdf', raster_scatter=False)
+                                data_pcolormesh=False, zoom=False, show=False, dpi=300, trenchwards_only=True,
+                                save_as='png', raster_scatter=False, modified_cmap=True)

@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 
-SMALL_SIZE = 12
+SMALL_SIZE = 14 # 12
+LEGEND_SIZE = 14
 MEDIUM_SIZE = 16
 LARGE_SIZE = 20
 FONT_FAMILY = 'Helvetica Neue'
@@ -12,7 +13,7 @@ style_dict = {
     'axes.labelsize': MEDIUM_SIZE,
     'xtick.labelsize': SMALL_SIZE,
     'ytick.labelsize': SMALL_SIZE,
-    'legend.fontsize': SMALL_SIZE,
+    'legend.fontsize': LEGEND_SIZE,
     'figure.titlesize': LARGE_SIZE
 }
 

@@ -3,11 +3,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from FUNCTIONS.functions_figures import spectra_compilation_mo_rate, mo_rate_stack_asymmetry_patchwise, \
-    mo_rate_stack_asymmetry_eventwise, mo_rate_stack_asymmetry_eventwise_mw_bins, nucleation_arrest_point_vs_mw
+    mo_rate_stack_asymmetry_eventwise, mo_rate_stack_asymmetry_eventwise_mw_bins, nucleation_arrest_point_vs_mw, \
+    corner_freq_analysis, total_slip_subduction, unified_spatiotemporal_mo_rate_analysis, total_moment_release
 from FUNCTIONS.functions_inv import compute_forward_model_vectorized
 from FUNCTIONS.functions_slab import UTM_GEO
 from FUNCTIONS.scaling_laws_figure import scaling_laws
-from config_files.plotting_style import set_matplotlib_style
+from config_files.plotting_style import set_matplotlib_style, get_style_dict, temporary_matplotlib_syle
 from sse_extraction.SlowSlipEventExtractor import SlowSlipEventExtractor
 from sse_extraction.sse_extraction_from_slip import get_events_from_slip_model, refine_durations
 from utils.geometry_utils import load_cascadia_geometry
@@ -26,7 +27,7 @@ if __name__ == '__main__':
     with np.load('../../DATA/sse-cascadia/denoised_ts/denoised_ts_slip5_1000_noise_with_trend_demean.npz') as f:
         denoised_ts, time_vec = f['data'], f['time']
 
-    TS = np.zeros((denoised_ts.shape[0], denoised_ts.shape[1], 3))
+    TS = np.zeros((denoised_ts.shape [0], denoised_ts.shape[1], 3))
     TS[:, :, :2] = denoised_ts
     n_time_steps = TS.shape[0]
 
@@ -56,7 +57,7 @@ if __name__ == '__main__':
     tremors = tremors[(tremors[:, 0] > 40) & (tremors[:, 0] < 50)]
     n_tremors_per_day = get_n_tremors_per_day(corrected_time, tremors)'''
 
-    total_moment_release = np.sum(Mo, axis=1)  # for all subfaults
+    tot_moment_release = np.sum(Mo, axis=1)  # for all subfaults
 
     signed_slip_potency = area * signed_slip * 1e-03  # slip converted to meters
     signed_Mo = shear_modulus * signed_slip_potency
@@ -74,27 +75,52 @@ if __name__ == '__main__':
                                                     base_folder='../../DATA/sse-cascadia/sse_info')
     new_duration_dict = refine_durations(slip_thresholds, sse_info_thresh, mo_rate_percentage=.99)
 
-    #spectra_compilation_mo_rate(sse_info_thresh, Mo, corrected_time, slip_thresholds, slip, area, shear_modulus, num_freq_bins=40)
+    # spectra_compilation_mo_rate(sse_info_thresh, Mo, corrected_time, slip_thresholds, slip, area, shear_modulus, num_freq_bins=40)
+
+    # total_moment_release(corrected_time, tot_moment_release)
 
     '''mo_rate_stack_asymmetry_patchwise(sse_info_thresh, slip_thresholds, n_dur_bins=5, show_fit=False, show_individual_mo=False,
-                            align_start=True, rescale_zero_y=False)'''
+                            align_start=True, rescale_zero_y=False)''' #old
 
     '''mo_rate_stack_asymmetry_eventwise(sse_info_thresh, slip_thresholds, new_duration_dict, n_dur_bins=5, show_fit=False,
                                       show_individual_mo=False, align_start=True, rescale_zero_y=False,
-                                      refine_durations=True)'''
+                                      refine_durations=True)''' # old
 
-    '''mo_rate_stack_asymmetry_eventwise_mw_bins(sse_info_thresh, slip_thresholds, new_duration_dict, n_mw_bins=5, show_fit=False,
+    '''mo_rate_stack_asymmetry_eventwise_mw_bins(sse_info_thresh, slip_thresholds, new_duration_dict, n_mw_bins=7, show_fit=False,
                                       show_individual_mo=False, align_start=True, rescale_zero_y=False,
-                                      refine_durations=True)'''
+                                      refine_durations=True) # correct one'''
 
-    #### refactor also before, but suppose code starts here
     refine_durations = True
     se = SlowSlipEventExtractor()
     se.load_extracted_events_unfiltered()
     time_array = se.ddh.corrected_time
 
-    scaling_laws(se, refine_durations, dpi=300)
+    '''current_style_dict = get_style_dict()
+    temporary_style = {key: current_style_dict[key] + 6. for key in current_style_dict if
+                       type(current_style_dict[key]) != str}
+    with temporary_matplotlib_syle(temporary_style):
+        unified_spatiotemporal_mo_rate_analysis(se, refine_durations, n_mw_bins=7, show_fit=False,
+                                                show_individual_mo=False, align_start=True,
+                                                rescale_zero_y=False)  # figure 4 of paper'''
+
+    current_style_dict = get_style_dict()
+    temporary_style = {key: current_style_dict[key] + 6. for key in current_style_dict if
+                       type(current_style_dict[key]) != str}
+    #temporary_style['legend.fontsize'] -= 2.
+    with temporary_matplotlib_syle(temporary_style):
+        scaling_laws(se, refine_durations, dpi=300, compute_b_value=True)
+
+    temporary_style = {key: current_style_dict[key] - 2. for key in current_style_dict if
+                       type(current_style_dict[key]) != str}
+    with temporary_matplotlib_syle(temporary_style):
+        total_slip_subduction(slip, geometry, station_codes, station_coordinates)
     exit(0)
+    #### refactor also before, but suppose code starts here
+
+    # corner_freq_analysis(se, refine_durations)
+
+    exit(0)
+
 
     nucleation_arrest_point_vs_mw()  # to be refactored with new oop formulation
 
