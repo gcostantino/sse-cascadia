@@ -1,0 +1,11 @@
+n_stations = 200
+window_length = 60
+depth_range = (20, 40)
+rake_range = (80, 100)
+slip_range = (5, 1000)  # (1, 50)
+data_gap_proba = 0.7
+max_n_disloc = 30
+spatial_proba = 0.7
+min_centroid_distance = 0
+max_centroid_distance = 50
+noise_has_trend = True
