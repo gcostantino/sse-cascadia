@@ -14,6 +14,8 @@ from sklearn.linear_model import RANSACRegressor
 
 from FUNCTIONS.functions_slab import UTM_GEO
 from sse_extraction.SlowSlipEventExtractor import SlowSlipEventExtractor
+from utility_methods import get_n_tremors_per_day
+from utils.catalogue_parsing import tremor_catalogue
 from utils.colormaps import custom_blues_colormap
 from utils.fourier_transform import custom_fft
 from utils.geo_functions import mo_to_mw, logmo_to_mw, mw_to_logmo, mw_to_mo
@@ -1720,11 +1722,48 @@ def corner_freq_analysis(se: SlowSlipEventExtractor, refine_durations: bool, dpi
     plt.show()
 
 
-def total_moment_release(time, mo_rates):
+def total_moment_release(time, mo_rates, show_tremor_rate=False):
     figure, axis = plt.subplots(1, 1, dpi=300, figsize=(24, 4))
-    axis.plot(time, mo_rates, linewidth=2)
-    axis.set_xlabel('Time [years]')
-    axis.set_ylabel('Moment rate [$N \cdot m \cdot s^{-1}$]')
-    axis.margins(x=0)
-    plt.savefig('figures/total_moment_release.pdf', bbox_inches='tight')
-    plt.close(figure)
+    if not show_tremor_rate:
+        axis.plot(time, mo_rates, linewidth=2, zorder=2)
+        axis.set_xlabel('Time [years]')
+        axis.set_ylabel('Moment rate [$N \cdot m \cdot s^{-1}$]')
+        axis.margins(x=0)
+        plt.savefig('figures/total_moment_release.pdf', bbox_inches='tight')
+        plt.close(figure)
+    else:
+        tremors = tremor_catalogue()
+        tremors = tremors[(tremors[:, 0] > 40) & (tremors[:, 0] < 50)]
+        tremor_rate = get_n_tremors_per_day(time, tremors)
+
+        _, = axis.plot(time, mo_rates, linewidth=2, color="C0", zorder=3)
+        axis.margins(x=0)
+        ax_tremors = axis.twinx()
+
+        tremor_markerlines, tremor_stemlines, tremor_baseline = ax_tremors.stem(
+            time, tremor_rate, markerfmt=" ", basefmt=" "
+        )
+
+        plt.setp(tremor_stemlines, 'linewidth', .5)
+        plt.setp(tremor_stemlines, 'color', 'grey')
+        plt.setp(tremor_stemlines, zorder=1)
+        plt.setp(tremor_markerlines, zorder=1)
+        plt.setp(tremor_baseline, zorder=1)
+
+        # ax_tremors.axvspan(axis.get_xlim()[0], 2009.55, ymax=0.37, alpha=0.25, color='grey', zorder=0, linewidth=0.)
+        ax_tremors.axvspan(axis.get_xlim()[0], 2009.55, alpha=0.25, color='grey', zorder=0, linewidth=0.)
+
+        axis.set_zorder(2)
+        axis.patch.set_visible(False)  # avoid hiding tremor stems with background
+        ax_tremors.set_zorder(1)
+
+        #axis.margins(x=0)
+        ax_tremors.margins(x=0)
+
+        # Labels
+        axis.set_xlabel('Time [years]')
+        axis.set_ylabel('Moment rate [$N \cdot m \cdot s^{-1}$]')
+        ax_tremors.set_ylabel('Daily # tremors')
+        ax_tremors.yaxis.label.set_color(tremor_stemlines.get_color())
+        plt.savefig('figures/total_moment_release.pdf', bbox_inches='tight')
+        plt.close(figure)

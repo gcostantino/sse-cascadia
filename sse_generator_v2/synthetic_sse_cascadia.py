@@ -6,7 +6,7 @@ import multiprocessing
 import numpy as np
 from joblib import Parallel, delayed
 
-from utils import read_from_slab2, compute_geodesic_km_conversion_array, _find_nearest_val
+from utility_methods import read_from_slab2, compute_geodesic_km_conversion_array, _find_nearest_val
 from .okada import forward as okada85
 import geopy.distance
 

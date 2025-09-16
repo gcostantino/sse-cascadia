@@ -13,7 +13,10 @@ from matplotlib.colors import Normalize
 
 from FUNCTIONS.functions_slab import UTM_GEO
 from sse_extraction.SlowSlipEventExtractor import SlowSlipEventExtractor
+from utility_methods import get_n_tremors_per_day
+from utils.catalogue_parsing import tremor_catalogue
 from utils.date_parsing import ymd_decimal_year_lookup
+from utils.geo_functions import mo_to_mw
 from utils.slab_plot_functions import init_basemap_cascadia, init_cartopy_cascadia
 from utils.slab_utils import read_depth_from_slab2
 
@@ -148,12 +151,18 @@ if __name__ == '__main__':
     admissible_depth, _ = read_depth_from_slab2(max_depth=100)
     utm_converted = pre_utm_conversion(se.ma.fault_geometry)
 
+    window_length, offset = se.ddh.window_length, se.ddh.offset
+    tremors = tremor_catalogue()
+    tremors = tremors[(tremors[:, 0] > 40) & (tremors[:, 0] < 50)]
+    tremors = tremors[(tremors[:, 3] > 2007) & (tremors[:, 3] < 2023 - (window_length + 2 * offset) / 365)]
+
     for thresh in se.slip_thresholds:
         mo_rate_list_patches = se.get_moment_rate_events(thresh, refine_durations)
         slip_rate_list_patches = se.get_slip_rate_patches_events(thresh, refine_durations)
         mo_rate_list_all_events = [np.sum(mo_rate_list_patches[i], axis=1) for i in range(len(mo_rate_list_patches))]
         dates_idx = se.get_event_date_idx(thresh, refine_durations)
         patches = se.get_event_patches(thresh, refine_durations)
+        mw = se.get_magnitude_events(thresh, refine_durations)
 
         n_events = len(mo_rate_list_patches)
         batch_size = n_rows * n_cols
@@ -176,6 +185,8 @@ if __name__ == '__main__':
                     fig.add_subplot(ax_mo)
                     fig.add_subplot(ax_slip)
 
+                    ax_tremors = ax_mo.twinx()
+
                     mo_rate = mo_rate_list_all_events[idx_ev]
                     tot_slip_event = np.sum(slip_rate_list_patches[idx_ev], axis=0)
                     ev_start_idx, ev_end_idx = dates_idx[idx_ev]
@@ -190,9 +201,23 @@ if __name__ == '__main__':
                     ev_dec_time_array = time_array[ev_start_idx: ev_end_idx + 1]
                     ev_time_array = [datetime(*date_lookup[date]) for date in ev_dec_time_array]
 
-                    ax_mo.plot(ev_dec_time_array, mo_rate / mo_rate_scale)
+                    mr_p, = ax_mo.plot(ev_dec_time_array, mo_rate / mo_rate_scale)
                     cascadia_map = plot_slip_subduction(fig, ax_slip, tot_slip_event, se.ma.fault_geometry,
                                                         admissible_depth, utm_converted, None)
+                    tremor_filter = np.where((tremors[:, 3] >= start_date_dec) & (tremors[:, 3] <= end_date_dec))[0]
+                    tremor_lat, tremor_lon = tremors[tremor_filter, 0], tremors[tremor_filter, 1]
+                    '''cascadia_map.scatter(tremor_lon, tremor_lat, color='k', marker='o', facecolors='none', linewidth=0.2,
+                                         alpha=.8, s=1, latlon=True)'''
+                    cascadia_map.scatter(tremor_lon, tremor_lat, color='k', marker='o',
+                                         linewidth=0.2,
+                                         alpha=1., s=0.05, latlon=True)
+                    tremor_rate = get_n_tremors_per_day(ev_dec_time_array, tremors[tremor_filter])
+                    # tr_p, = ax_tremors.plot(ev_dec_time_array, tremor_rate, color='grey')
+                    _, tremor_stemlines, _ = ax_tremors.stem(ev_dec_time_array, tremor_rate,
+                                                                      markerfmt=" ", basefmt=" ")
+
+                    plt.setp(tremor_stemlines, 'linewidth', 1.5)
+                    plt.setp(tremor_stemlines, 'color', 'grey')
 
                     # Adjust the top subplot's position: shrink its width.
                     pos_top = ax_mo.get_position()
@@ -201,9 +226,10 @@ if __name__ == '__main__':
                     ax_mo.set_position(new_pos_top)
                     ax_mo.ticklabel_format(useOffset=False)
                     ax_mo.xaxis.set_major_locator(ticker.MaxNLocator(nbins=1))
-                    ax_mo.set_title(f'event #{idx_ev + 1}\nduration:{len(mo_rate)} days')
+                    ax_mo.set_title(f'event #{idx_ev + 1}, $M_w$ {round(mw[idx_ev], 2)}\nduration:{len(mo_rate)} days')
                     if j == 0:
                         ax_mo.set_ylabel('$\dot M_0$ (Nmd$^{-1})$\n($\\times10^{17}$)')
+                        ax_tremors.set_ylabel('Daily\n# tremors\n(norm.)')
                         cascadia_map.drawparallels([38, 40, 42, 44, 46, 48, 50], labels=[1, 0, 0, 0], linewidth=0.1)
                     else:
                         cascadia_map.drawparallels([38, 40, 42, 44, 46, 48, 50], labels=[0, 0, 0, 0], linewidth=0.1)
@@ -212,6 +238,11 @@ if __name__ == '__main__':
                         cascadia_map.drawmeridians([-122, -126, -130], labels=[0, 0, 0, 1], linewidth=0.1)
                     else:
                         cascadia_map.drawmeridians([-122, -126, -130], labels=[0, 0, 0, 0], linewidth=0.1)
+                    ax_mo.yaxis.label.set_color(mr_p.get_color())
+                    ax_tremors.yaxis.label.set_color(tremor_stemlines.get_color())
+                    ax_tremors.set_yticks([])  # removes ticks
+                    ax_tremors.set_yticklabels([])  # removes labels
             # plt.tight_layout()
+            # plt.show()
             plt.savefig(f'figures/all_events/thresh_{thresh}/all_events_{n + 1}.pdf', bbox_inches='tight')
             plt.close(fig)

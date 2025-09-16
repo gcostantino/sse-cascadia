@@ -10,7 +10,7 @@ from tsl.nn.blocks.decoders import AttPool
 from tsl.nn.blocks.encoders import AGCRN
 
 from sse_denoiser.spatio_temporal_transformer import Transformer as SpatioTemporalTransformer
-from utils import plot_actual_vs_predicted_cascadia, plot_disp_field_cascadia, \
+from utility_methods import plot_actual_vs_predicted_cascadia, plot_disp_field_cascadia, \
     plot_actual_vs_predicted_cascadia_multiple, denoising_plots
 
 

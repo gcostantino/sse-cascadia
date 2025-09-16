@@ -65,7 +65,7 @@ def load_gnss_data_cascadia(**kwargs):
     The data is taken by considering the time span associated to the longest available time series.
     The unit measure is converted in mm."""
     n_directions = kwargs.pop('n_directions', 2)
-    work_directory = os.path.expandvars(kwargs['work_directory']) if 'work_directory' in kwargs else './geo_data'
+    work_directory = os.path.expandvars(kwargs['work_directory']) if 'work_directory' in kwargs else '../../DATA/GNSS'
     station_codes, station_coordinates = cascadia_coordinates()
     n_stations = len(station_codes)
     file_lines = np.zeros((len(station_codes),))
@@ -148,7 +148,7 @@ def detrend_nan_v2(x, data):
 
 def cascadia_coordinates():
     """3D position of GNSS stations in Cascadia"""
-    with open('geo_data/NGL_stations_cascadia.txt') as f:
+    with open('../../DATA/GNSS/NGL_info/NGL_stations_cascadia.txt') as f:
         rows = f.read().splitlines()
         station_codes = []
         station_coordinates = []
@@ -156,7 +156,7 @@ def cascadia_coordinates():
             station_code, station_lat, station_lon, station_height = row.split(' ')
             station_codes.append(station_code)
             station_coordinates.append([station_lat, station_lon, station_height])
-        station_coordinates = np.array(station_coordinates, dtype=np.float_)
+        station_coordinates = np.array(station_coordinates, dtype=np.float64)
     return station_codes, station_coordinates
 
 
@@ -291,13 +291,13 @@ def get_cascadia_box(extended=False):
     return cascadia_box
 
 
-def read_from_slab2(max_depth=60, depth_range=None):
+def read_from_slab2(max_depth=60, basepath='/Users/giuseppe/Documents/DATA/common/slab/slab2', depth_range=None):
     """Reads the slab2 grid and returns depth, strike, dip, and positions of points on the slab
     such that the depth is less than 60 km."""
     longitude_correction = [-360, 0, 0]
-    depth_grid = np.loadtxt('geo_data/slab2/cas_slab2_dep_02.24.18.xyz', delimiter=',') + longitude_correction
-    dip_grid = np.loadtxt('geo_data/slab2/cas_slab2_dip_02.24.18.xyz', delimiter=',') + longitude_correction
-    strike_grid = np.loadtxt('geo_data/slab2/cas_slab2_str_02.24.18.xyz', delimiter=',') + longitude_correction
+    depth_grid = np.loadtxt(f'{basepath}/cas_slab2_dep_02.24.18.xyz', delimiter=',') + longitude_correction
+    dip_grid = np.loadtxt(f'{basepath}/cas_slab2_dip_02.24.18.xyz', delimiter=',') + longitude_correction
+    strike_grid = np.loadtxt(f'{basepath}/cas_slab2_str_02.24.18.xyz', delimiter=',') + longitude_correction
 
     if depth_range is None:
         ind_depth = np.where(depth_grid[:, 2] > - max_depth)[0]

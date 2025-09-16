@@ -77,7 +77,8 @@ if __name__ == '__main__':
 
     # spectra_compilation_mo_rate(sse_info_thresh, Mo, corrected_time, slip_thresholds, slip, area, shear_modulus, num_freq_bins=40)
 
-    # total_moment_release(corrected_time, tot_moment_release)
+    total_moment_release(corrected_time, tot_moment_release, show_tremor_rate=True)
+    exit(0)
 
     '''mo_rate_stack_asymmetry_patchwise(sse_info_thresh, slip_thresholds, n_dur_bins=5, show_fit=False, show_individual_mo=False,
                             align_start=True, rescale_zero_y=False)''' #old

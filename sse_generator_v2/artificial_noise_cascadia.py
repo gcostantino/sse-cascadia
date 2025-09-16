@@ -9,7 +9,7 @@ from joblib import Parallel, delayed
 from sklearn.decomposition import PCA
 
 from sse_generator_v2.surrogates import Surrogates
-from utils import _preliminary_operations, detrend_nan_v2, \
+from utility_methods import _preliminary_operations, detrend_nan_v2, \
     cascadia_filtered_stations
 
 
@@ -48,7 +48,7 @@ def n_surrogates_stack_pca_lib(data, n_surrogates, n_iterations=5, parallel=Fals
 
 
 def generate_artificial_noise(n, n_selected_stations, window_length, reference_period, p=0.7,
-                                        add_trend=False):
+                                        add_trend=False, parallel=True):
     """As artificial_noise_full_randomized_v2(), but we perform the station selection on the whole (2007,2023)
     period. Another station is removed: 'LNG2', through the cascadia_filtered_stations() function.
     """
@@ -72,7 +72,7 @@ def generate_artificial_noise(n, n_selected_stations, window_length, reference_p
         (n_non_overlapping_windows * n_surrogates, gnss_data_subset.shape[0], window_length, gnss_data_subset.shape[2]))
     for direction in range(gnss_data_subset.shape[2]):
         surrogates = n_surrogates_stack_pca_lib(gnss_data_subset[:, :, direction], n_surrogates, n_iterations=5,
-                                                parallel=True)
+                                                parallel=parallel)
         if add_trend:
             surrogates = surrogates + trends[np.newaxis, :, :, direction]
         for sur in range(n_surrogates):

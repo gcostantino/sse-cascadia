@@ -90,7 +90,7 @@ if __name__ == '__main__':
             max_time_array_in_bin_actual = np.linspace(0, max_duration_bin,
                                                        max_duration_bin)  # to plot the right duration
             binned_stack, mo_list_stack = [], []
-            for idx in bin_idx:
+            for k, idx in enumerate(bin_idx):
                 mo_len = len(mo_rate_list_all_events[idx])
                 if mo_len < 2:
                     continue
@@ -108,9 +108,14 @@ if __name__ == '__main__':
                 time_shift = 0 if align_start else np.argmax(upsampled_mo_rate)
                 # upsampled_mo_rate = upsampled_mo_rate / np.max(upsampled_mo_rate)
                 if show_individual_mo:
-                    axes_bin[i].plot(max_time_array_in_bin_actual - time_shift, upsampled_mo_rate, alpha=.5,
-                                     color=cmap(norm(mw_all_events[idx])))
-                    axes_bin[i].set_title(f'$M_w \in${round(mw_bins[i], 2), round(mw_bins[i + 1], 2)}')
+                    '''axes_bin[i].plot(max_time_array_in_bin_actual - time_shift, upsampled_mo_rate, alpha=.5,
+                                     color=cmap(norm(mw_all_events[idx])))'''
+                    norm_upsampled_mo_rate = (upsampled_mo_rate - np.min(upsampled_mo_rate)) / (np.max(upsampled_mo_rate) - np.min(upsampled_mo_rate))
+                    axes_bin[i].plot(max_time_array_in_bin_actual - time_shift, norm_upsampled_mo_rate + (k + 1) * 2, alpha=1.,
+                                     color='k'
+                                     )
+                    mw_range = float(round(mw_bins[i], 2)), float(round(mw_bins[i + 1], 2))
+                    axes_bin[i].set_title(f'$M_w \in${mw_range}')
                     if i >= 3:
                         axes_bin[i].set_xlabel('Duration [days]')
                 binned_stack.append(upsampled_mo_rate)
@@ -123,8 +128,11 @@ if __name__ == '__main__':
             y_shift_stack = binned_stack[0] if rescale_zero_y else 0
             ax_mo_rates.plot(max_time_array_in_bin_actual - time_shift_stack, binned_stack - y_shift_stack,
                              color=colors[i], lw=2.)
-            axes_bin[i].plot(max_time_array_in_bin_actual - time_shift_stack, binned_stack - y_shift_stack,
-                             color='k', lw=2.)
+            norm_binned_stack = (binned_stack - np.min(binned_stack)) / (np.max(binned_stack) - np.min(binned_stack))
+            '''axes_bin[i].plot(max_time_array_in_bin_actual - time_shift_stack, binned_stack - y_shift_stack,
+                             color='k', lw=3.)'''
+            axes_bin[i].plot(max_time_array_in_bin_actual - time_shift_stack, norm_binned_stack,
+                             color='k', lw=3.)
 
             bin_idx_distance = np.where((valid_mw >= mw_bin[0]) & (valid_mw < mw_bin[1]))[0]
 
@@ -139,6 +147,7 @@ if __name__ == '__main__':
         ax_mo_rates.set_title('All stacks')
 
         axes_bin[3].set_ylabel('Moment rate function [$N\cdot m \cdot d^{-1}$]')
+        plt.show()
         '''if align_start:
             ax_mo_rates.set_xlabel('Duration [days]')
         else:
