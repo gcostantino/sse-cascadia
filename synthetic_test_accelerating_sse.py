@@ -5,9 +5,9 @@ import matplotlib
 from torch.utils.data import DataLoader as TorchDataLoader
 
 from config_files.plotting_style import set_matplotlib_style
-from relocking_data_test import detrend_nan_v2
+
 from sse_generator_v2.synthetic_sse_cascadia import cosinusoidal_rise_time
-from utility_methods import read_from_slab2
+from utility_methods import read_from_slab2, detrend_nan_v2
 
 from sse_denoiser.dataset_utils import Dataset
 from sse_denoiser.stagrnn import STAGRNNDenoiser
@@ -159,6 +159,13 @@ if __name__ == '__main__':
     okada_disp, epi_lat, epi_lon, hypo_depth, strike, dip, rake, slip, L, W = _generate_dislocation(station_coordinates)
     # okada disp is a tuple
     okada_ts = generate_fast_okada_time_series(okada_disp, 60, 30, 1)
+    # compute stress drop
+    shear_modulus = 30e9
+    area = L * W * 1e6  # m^2
+    equiv_radius = np.sqrt(area / np.pi)
+    stress_drop = shear_modulus * slip * 1e-3 / equiv_radius
+    print('stress_drop', stress_drop * 1e-6, 'MPa')
+    exit(0)
     dislocation_dict = {'epi_lat': epi_lat, 'epi_lon': epi_lon, 'strike': strike, 'dip': dip, 'L': L, 'W': W}
     fig = plot_static_disp(station_coordinates, okada_ts[:, -1, :], draw_disp_field=True, dislocation_parameters=dislocation_dict)
     plt.savefig('figures/supplement/synth_disloc.pdf', bbox_inches='tight')
