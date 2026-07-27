@@ -1,5 +1,4 @@
 import numpy as np
-from skimage.measure import EllipseModel
 
 
 class ConvergenceError(Exception):
@@ -11,6 +10,7 @@ class ConvergenceError(Exception):
 
 def fit_ellipse_mo(x, y, mo_rates, mo_thresh):
     """Fit a 2D ellipse to mo rates > mo_thresh."""
+    from skimage.measure import EllipseModel
     em = EllipseModel()
     mask_ell = mo_rates > mo_thresh * np.max(mo_rates)
     x_thresh, y_thresh = x[mask_ell], y[mask_ell]
