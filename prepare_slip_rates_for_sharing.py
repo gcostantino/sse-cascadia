@@ -33,7 +33,7 @@ if __name__ == '__main__':
     # rectangle_x, rectangle_y, rectangle_z, width_km, height_km, area_ratio_km2, LonLatD_to_XYZ, Dip, Strike, Centroid_X, Centroid_Y, Centroid_Z, Vertex1_X, Vertex1_Y, Vertex1_Z,\ Vertex2_X, Vertex2_Y, Vertex2_Z, Vertex3_X, Vertex3_Y, Vertex3_Z, Area
     # You will probably need the following elements : Dip, Strike, Centroid_X, Centroid_Y, Centroid_Z, Area.
     #
-    # # slip_rates --> is a matrix containing time x slip rates, where the slip rates are a concatenation of strike slip and dip slip (twice the size of the geometry). Slip is in mm.
+    # slip_rates --> is a matrix containing time x slip rates, where the slip rates are a concatenation of strike slip and dip slip (twice the size of the geometry). Slip is in mm.
 
     n_triangles = len(geometry[:, 9])
     n_time_steps = len(time_array)
@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     # slip_rates contains the full slip history along the Cascadia margin.
     # To extract the slow slip events, you can refer to the catalogue dates, but
-    # for a precise extraction and to reproduce the results of the paper, refer to the original code and use
+    # for a precise extraction and to reproduce all the results of the paper, refer to the original code and use
     # the class SlowSlipEventExtractor(...).
     # the code is free to use and available on GitHub at: https://github.com/gcostantino/sse-cascadia
     # Also, feel free to contact me at giuseppe.costantino@ens.fr
