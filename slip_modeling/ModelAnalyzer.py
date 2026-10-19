@@ -7,19 +7,19 @@ from utils.slip_model_utils import load_slip_models
 
 
 class ModelAnalyzer:
-    def __init__(self, preferred_lambda=100, preferred_sigma_m=.2, preferred_sigma_d=.1, shear_modulus=30e9):
+    def __init__(self, preferred_lambda=100, preferred_sigma_m=.2, preferred_sigma_d=.1, shear_modulus=30e9, **kwargs):
         self.preferred_lambda = preferred_lambda  # km
         self.preferred_sigma_m = preferred_sigma_m  # mm
         self.preferred_sigma_d = preferred_sigma_d
         self.slip_model = load_slip_models(self.preferred_lambda, self.preferred_sigma_m, self.preferred_sigma_d)
-        station_codes, station_coordinates = load_cascadia_selected_stations()
+        station_codes, station_coordinates = load_cascadia_selected_stations(**kwargs)
         geometry, green_td = load_cascadia_geometry()
         self.station_codes = station_codes
         self.station_coordinates = station_coordinates
         self.fault_geometry = geometry
         self.G = green_td
-        self.strike_slip_rates = self.slip_model[:, :(len(geometry[:, 9]))]
-        self.dip_slip_rates = self.slip_model[:, (len(geometry[:, 9])):]
+        self.dip_slip_rates = self.slip_model[:, :(len(geometry[:, 9]))]
+        self.strike_slip_rates = self.slip_model[:, (len(geometry[:, 9])):]
         self.slip_rates = np.sqrt(self.dip_slip_rates ** 2 + self.strike_slip_rates ** 2)  # in mm
         self.signed_slip_rates = np.sign(self.dip_slip_rates) * self.slip_rates
         self.area = self.fault_geometry[:, 21] * 1e+6  # in m^2
