@@ -1417,9 +1417,10 @@ def slip_latitude_time_plot(time, slip_rates, tremors, y_centr_lat, offset=20, w
                             static=False, downsample_tremors=False, draw_tremors=True, tremor_alpha=1.,
                             data_pcolormesh=False, zoom=False, show=True, dpi=200, trenchwards_only=True,
                             save_as='pdf', raster_scatter=True, modified_cmap=False, n_lat_bins=100,
-                            scatter_size=5):
+                            scatter_size=5, vmin=None, vmax=None, tremor_scatter_size=0.2, xlabel=None,
+                            fig_savepath=None):
     if trenchwards_only:
-        vmin, vmax = 0, 0.5
+        vmin, vmax = (0, 0.5) if (vmin is None and vmax is None) else (vmin, vmax)
         cmap = matplotlib.cm.get_cmap("turbo").copy()  # matplotlib.cm.get_cmap("turbo_r").copy()
         if modified_cmap:
             from matplotlib.colors import ListedColormap
@@ -1433,7 +1434,7 @@ def slip_latitude_time_plot(time, slip_rates, tremors, y_centr_lat, offset=20, w
         norm = matplotlib.colors.Normalize(vmin=vmin, vmax=vmax)
 
     else:
-        vmin, vmax = -0.02, 0.1
+        vmin, vmax = (-0.05, 0.1) if (vmin is None and vmax is None) else (vmin, vmax)
         cmap = matplotlib.cm.get_cmap("RdBu_r").copy()  # matplotlib.cm.get_cmap("turbo_r").copy()
         norm = TwoSlopeNorm(0., vmin=vmin, vmax=vmax)
 
@@ -1473,7 +1474,6 @@ def slip_latitude_time_plot(time, slip_rates, tremors, y_centr_lat, offset=20, w
         # cbar = plt.colorbar(fraction=0.046, pad=0.02, shrink=0.9)
 
     if draw_tremors:
-        tremor_scatter_size = 0.2
         if downsample_tremors:
             fraction_points_per_cluster = 0.05
             # we only downsample tremors for PNSN catalogue
@@ -1508,14 +1508,15 @@ def slip_latitude_time_plot(time, slip_rates, tremors, y_centr_lat, offset=20, w
     cax.xaxis.set_ticks_position('top')
     cbar.solids.set_alpha(1)
     # cbar.ax.set_ylabel('Denoised E-W displacement rate [mm/day]', rotation=270, labelpad=25)
-    cbar.ax.set_xlabel('Slip rates [mm/day]', labelpad=-60)
+    cbar.ax.set_xlabel('Slip rates [mm/day]' if xlabel is None else xlabel, labelpad=-60)
     '''if not trenchwards_only:
         # sc.set_clim([vmin, vmax])
         cbar.ax.minorticks_on()'''
     if show:
         plt.show()
     else:
-        plt.savefig(f'figures/overview_slip_tremors.{save_as}', bbox_inches='tight')
+        plt.savefig(f'figures/overview_slip_tremors.{save_as}' if fig_savepath is None else fig_savepath,
+                    bbox_inches='tight')
         plt.close(figure)
 
 
@@ -1567,7 +1568,8 @@ def total_slip_subduction(slip, geometry, codes, coords):
     # clabel_txt = axis.clabel(isodepth, isodepth.levels, inline=True, fontsize=12, fmt=isodepth_label_fmt)
 
     idx_albh = codes.index('ALBH')
-    cascadia_map.scatter(coords[idx_albh, 1], coords[idx_albh, 0], latlon=True, color='C2', edgecolors='k', marker='^', s=40, zorder=10)
+    cascadia_map.scatter(coords[idx_albh, 1], coords[idx_albh, 0], latlon=True, color='C2', edgecolors='k', marker='^',
+                         s=40, zorder=10)
 
     '''bbox={'boxstyle': 'square,pad=0.3', 'facecolor': 'white', 'edgecolor': 'none'}
     for txt in clabel_txt:
@@ -1757,7 +1759,7 @@ def total_moment_release(time, mo_rates, show_tremor_rate=False):
         axis.patch.set_visible(False)  # avoid hiding tremor stems with background
         ax_tremors.set_zorder(1)
 
-        #axis.margins(x=0)
+        # axis.margins(x=0)
         ax_tremors.margins(x=0)
 
         # Labels
