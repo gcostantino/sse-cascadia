@@ -47,8 +47,8 @@ if __name__ == '__main__':
 
     print(f'Analyzed period: {time_array[0]} - {time_array[-1]}')
 
-    strike_slip_component = slip_model[:, :n_triangles]
-    dip_slip_component = slip_model[:, n_triangles:]
+    dip_slip_component = slip_model[:, :n_triangles]
+    strike_slip_component = slip_model[:, n_triangles:]
 
 
     slip_rates = np.sqrt(dip_slip_component ** 2 + strike_slip_component ** 2)
