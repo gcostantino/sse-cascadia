@@ -10,8 +10,9 @@ from utils.geo_functions import mo_to_mw
 
 
 class SlowSlipEventExtractor:
-    def __init__(self, slip_thresholds=(0.07, 0.3, 0.5, 0.7), base_sse_info_folder='../../DATA/sse-cascadia/sse_info'):
-        self.ma = ModelAnalyzer()
+    def __init__(self, slip_thresholds=(0.07, 0.3, 0.5, 0.7), base_sse_info_folder='../../DATA/sse-cascadia/sse_info',
+                 **kwargs):
+        self.ma = ModelAnalyzer(**kwargs)
         self.ddh = DenoisedDataHandler()
         self.slip_thresholds = slip_thresholds
         self.base_sse_info_folder = base_sse_info_folder
