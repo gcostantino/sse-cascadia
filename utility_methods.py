@@ -5,8 +5,6 @@ import datetime
 
 import matplotlib
 import numpy as np
-import seaborn as sns
-from geopy.distance import geodesic
 from matplotlib import pyplot as plt
 from mpl_toolkits.basemap import Basemap
 from scipy import stats, interpolate
@@ -15,7 +13,7 @@ from scipy.stats import gaussian_kde
 from sklearn.metrics import roc_curve, auc, confusion_matrix
 
 
-def _preliminary_operations(reference_period, detrend=True, **kwargs):
+'''def _preliminary_operations(reference_period, detrend=True, **kwargs):
     """Returns GNSS data in reference_period. When detrending is used, the trends are not returned."""
     gnss_data, time_array = load_gnss_data_cascadia(reference_period=reference_period, **kwargs)
     if detrend:
@@ -24,7 +22,7 @@ def _preliminary_operations(reference_period, detrend=True, **kwargs):
     reference_time_array = time_array[reference_time_indices]
     selected_gnss_data = gnss_data[:, reference_time_indices, :]
     return selected_gnss_data, reference_time_array, gnss_data, time_array
-
+'''
 
 def _decyr_time_array(reference_period):
     """Convention: the array starts on January 1st and ends on December 31."""
@@ -187,6 +185,7 @@ def plot_roc_curve(y_test, y_proba):
 def plot_confusion_matrix(y_test, y_pred):
     """Utility function for Tensorboard. Plots the confusion matrix and returns the figure. The variable
     y_pred is assumed as an array obtained from y_proba after selecting a threshold."""
+    import seaborn as sns
     figure = plt.figure(figsize=(8, 8))
     sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, cmap='Blues', fmt='d',
                 xticklabels=['noise', 'noise+signal'], yticklabels=['noise', 'noise+signal'])  # fmt='g'
@@ -340,7 +339,7 @@ def read_from_slab2(max_depth=60, basepath='/Users/giuseppe/Documents/DATA/commo
     return depth_grid[ind_depth], strike_grid[ind_depth], dip_grid[ind_depth], region
 
 
-def cascadia_filtered_stations(n_selected_stations, reference_period=(2007, 2023), **kwargs):
+'''def cascadia_filtered_stations(n_selected_stations, reference_period=(2007, 2023), **kwargs):
     """Removes meaningless stations and returns the corresponding indices 'stations_subset_full',
     referring to the whole cascadia network."""
     gnss_data, _, _, _ = _preliminary_operations(reference_period, detrend=False, **kwargs)
@@ -356,7 +355,7 @@ def cascadia_filtered_stations(n_selected_stations, reference_period=(2007, 2023
     station_codes_subset, station_coordinates_subset = np.array(station_codes)[stations_subset], station_coordinates[
                                                                                                  stations_subset, :]
     stations_subset_full = np.nonzero(np.in1d(full_station_codes, station_codes_subset))[0]
-    return station_codes_subset, station_coordinates_subset, station_codes, station_coordinates, stations_subset_full
+    return station_codes_subset, station_coordinates_subset, station_codes, station_coordinates, stations_subset_full'''
 
 
 def _train_contour(cat):
@@ -685,6 +684,7 @@ def denoising_plots(X_test_loader, y_test, y_pred, cat, station_coordinates, dir
 
 
 def _geodesic_km_conversion(lat1, lon1, lat2, lon2):
+    from geopy.distance import geodesic
     latdist = np.sign(lat1 - lat2) * geodesic((lat1, lon1), (lat2, lon1)).km
     londist = np.sign(lon1 - lon2) * geodesic((lat1, lon1), (lat1, lon2)).km
     return londist, latdist
