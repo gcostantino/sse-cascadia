@@ -6,12 +6,18 @@ from scipy.stats import linregress
 
 def _preliminary_operations(reference_period, detrend=True, **kwargs):
     """Returns GNSS data in reference_period. When detrending is used, the trends are not returned."""
-    gnss_data, time_array = _load_gnss_data_cascadia(reference_period=reference_period, **kwargs)
+    if 'load_uncertainties' in kwargs and kwargs['load_uncertainties']:
+        gnss_data, time_array, unc = _load_gnss_data_cascadia(reference_period=reference_period, **kwargs)
+    else:
+        gnss_data, time_array = _load_gnss_data_cascadia(reference_period=reference_period, **kwargs)
     if detrend:
         gnss_data = detrend_nan(time_array, gnss_data)  # gnss data is detrended first
     reference_time_indices = get_reference_period(time_array, reference_period)
     reference_time_array = time_array[reference_time_indices]
     selected_gnss_data = gnss_data[:, reference_time_indices, :]
+    if 'load_uncertainties' in kwargs and kwargs['load_uncertainties']:
+        selected_unc = unc[:, reference_time_indices, :]
+        return selected_gnss_data, reference_time_array, selected_unc, gnss_data, time_array, unc
     return selected_gnss_data, reference_time_array, gnss_data, time_array
 
 
@@ -31,11 +37,18 @@ def _load_gnss_data_cascadia(**kwargs):
     time_array = np.loadtxt(os.path.join(work_directory, f'GNSS_CASCADIA/txt/{target_station}.txt'))[:, 0]
     # time_array = _decyr_time_array(kwargs['reference_period'])  # this will be used soon
     gnss_data = np.zeros((n_stations, len(time_array), n_directions))
+    unc = np.zeros((n_stations, len(time_array), n_directions))
     gnss_data.fill(np.nan)
+    unc.fill(np.nan)
     for i, code in enumerate(station_codes):
         data = np.loadtxt(os.path.join(work_directory, f'GNSS_CASCADIA/txt/{code}.txt'))[:, :n_directions + 1]
+        # d_std = np.loadtxt(os.path.join(work_directory, f'GNSS_CASCADIA/txt_with_unc/{code}.txt'), usecols=(4, 5, 6))[:, :n_directions + 1]
+        d_std = np.loadtxt(os.path.join(work_directory, f'GNSS_CASCADIA/tenv3/{code}.txt'), skiprows=1, usecols=(14, 15, 16))[:, :n_directions]
         correspondence_indices = np.searchsorted(time_array, data[:, 0])
         gnss_data[i, correspondence_indices, :] = data[:, 1:] * 1e03
+        unc[i, correspondence_indices, :] = d_std * 1e03
+    if 'load_uncertainties' in kwargs and kwargs['load_uncertainties']:
+        return gnss_data, time_array, unc
     return gnss_data, time_array
 
 
@@ -76,7 +89,7 @@ def cascadia_coordinates(work_directory='../../DATA/GNSS/NGL_info'):
             station_code, station_lat, station_lon, station_height = row.split(' ')
             station_codes.append(station_code)
             station_coordinates.append([station_lat, station_lon, station_height])
-        station_coordinates = np.array(station_coordinates, dtype=np.float_)
+        station_coordinates = np.array(station_coordinates, dtype=np.float64)
     return station_codes, station_coordinates
 
 
@@ -117,9 +130,10 @@ def load_gnss_data_cascadia(reference_period, n_selected_stations, detrend=False
     return selected_gnss_data, reference_time_array, gnss_data, time_array
 
 
-def load_albh_data_cascadia(reference_period, code='ALBH', m_to_mm=1e03, **kwargs):
+def load_albh_data_cascadia(reference_period, code='ALBH', m_to_mm=1e03, work_directory=None, **kwargs):
     """Temporary load function, to be used for future development. E-W data is loaded only."""
-    work_directory = os.path.expandvars(kwargs.pop('work_directory', './geo_data'))
+    if work_directory is None:
+        work_directory = os.path.expandvars(kwargs.pop('work_directory', './geo_data'))
     td = np.loadtxt(os.path.join(work_directory, f'GNSS_CASCADIA/txt/{code}.txt'), usecols=(0, 1))
     d_std = np.loadtxt(os.path.join(work_directory, f'GNSS_CASCADIA/tenv3/{code}.txt'), skiprows=1, usecols=14)
     time_array, data = td[:, 0], td[:, 1]
@@ -128,7 +142,7 @@ def load_albh_data_cascadia(reference_period, code='ALBH', m_to_mm=1e03, **kwarg
     return time_array[reference_time_indices], data[reference_time_indices], d_std[reference_time_indices]
 
 
-def load_cascadia_selected_stations():
-    station_codes = np.loadtxt('INPUT_FILES/stations_cascadia_200.txt', usecols=0, dtype=np.str_).tolist()
-    station_coordinates = np.loadtxt('INPUT_FILES/stations_cascadia_200.txt', usecols=(1, 2))
+def load_cascadia_selected_stations(station_folder='INPUT_FILES'):
+    station_codes = np.loadtxt(os.path.join(station_folder,'stations_cascadia_200.txt'), usecols=0, dtype=np.str_).tolist()
+    station_coordinates = np.loadtxt(os.path.join(station_folder,'stations_cascadia_200.txt'), usecols=(1, 2))
     return station_codes, station_coordinates
